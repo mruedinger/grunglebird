@@ -71,7 +71,7 @@ export async function verifyTurnstile(
 
 export function requireAccess(request: Request, env: Env): Response | null {
   if (env.DEV === '1') return null;
-  const email = request.headers.get('cf-access-authenticated-user-email');
-  if (!email) return jsonError(401, 'Cloudflare Access required');
+  const jwt = request.headers.get('cf-access-jwt-assertion');
+  if (!jwt) return jsonError(401, 'Cloudflare Access required');
   return null;
 }
