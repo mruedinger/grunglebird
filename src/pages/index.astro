@@ -358,6 +358,10 @@ const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         const r = await fetch(`/api/pledges/${p.id}`, { method: 'DELETE' });
         if (r.ok) {
           banner.hidden = true;
+          form.reset();
+          delete form.dataset.editingId;
+          (document.getElementById('is_private') as HTMLInputElement).checked = true;
+          status.textContent = 'Pledge deleted.';
           await loadPledges();
         }
       };
