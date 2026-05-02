@@ -17,6 +17,7 @@ Live at <https://grunglebird.com>.
 - Public pledge list shows real names or "Anonymous"; Venmo handles are admin-only
 - Pledgers can edit or delete their own pledge from the same browser without
   signing in (capability cookie tied to a per-row edit token)
+- Public pledge writes have a small server-side rate limit (per-IP, not per-person) to slow down spam
 - Admin page (`/admin`) gated by Cloudflare Access — view all pledges with real
   names + Venmo handles, mark them paid, or delete them
 
@@ -25,7 +26,6 @@ Live at <https://grunglebird.com>.
 ```sh
 npm install
 cp .dev.vars.example .dev.vars
-cp .env.example .env
 npm run dev
 ```
 
@@ -58,7 +58,7 @@ so you can test the admin page locally.
    ```
 
    If your `CLOUDFLARE_API_TOKEN` doesn't have D1 write scope, paste the contents
-   of `migrations/0001_init.sql` into the D1 Console in the dashboard instead.
+   of the migration files into the D1 Console in the dashboard instead.
 
 3. **Create a Cloudflare Pages project** and connect this repo (or do a direct
    upload via `npm run deploy`). In the Pages dashboard:
@@ -67,16 +67,7 @@ so you can test the admin page locally.
    - Build output directory: `dist`
    - Bind D1: variable name `DB`, database `mikestarter` (Settings → Functions)
 
-   Env vars on this project are managed through `wrangler.toml`, not the
-   dashboard, because it declares bindings. Concretely:
-
-   - `PUBLIC_TURNSTILE_SITE_KEY` — declared under `[vars]` in `wrangler.toml`
-     (it's public — it ships in the HTML). Set the real value there, commit,
-     push to trigger a rebuild.
-   - `TURNSTILE_SECRET_KEY` — set as an encrypted **Secret** in the Pages
-     dashboard (Settings → Environment variables). Secrets stay in the dashboard
-     even when bindings live in `wrangler.toml`.
-   - **Do not** set `DEV` in production.
+   Do not set `DEV` in production.
 
 4. **Custom domain**: in Pages → Custom domains, add your domain (e.g.
    `grunglebird.com`). Cloudflare adds the CNAME automatically if the domain
@@ -99,22 +90,16 @@ so you can test the admin page locally.
    The admin API (`functions/api/admin/*`) reads the `cf-access-jwt-assertion`
    header injected by Access to confirm the request was authorized upstream.
 
-6. **Turnstile**: create a new widget at
-   <https://dash.cloudflare.com/?to=/:account/turnstile>, list your site's
-   hostname(s) under "Hostnames" (e.g. `grunglebird.com`), and copy:
-
-   - Site key → `[vars]` block in `wrangler.toml` as `PUBLIC_TURNSTILE_SITE_KEY`
-   - Secret key → Pages dashboard as a Secret named `TURNSTILE_SECRET_KEY`
-
 ## Project layout
 
 ```
 .
 ├── astro.config.mjs
 ├── migrations/
-│   └── 0001_init.sql           # D1 schema
+│   ├── 0001_init.sql           # pledge schema
+│   └── 0002_rate_limits.sql    # write throttle buckets
 ├── functions/
-│   ├── _utils.ts               # validation, cookies, Turnstile, Access guard
+│   ├── _utils.ts               # validation, cookies, rate limits, Access guard
 │   └── api/
 │       ├── pledges.ts          # GET (public list) / POST (create)
 │       ├── pledges/

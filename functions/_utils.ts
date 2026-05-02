@@ -1,6 +1,5 @@
 export interface Env {
   DB: D1Database;
-  TURNSTILE_SECRET_KEY?: string;
   DEV?: string;
 }
 
@@ -51,22 +50,42 @@ export function validatePledge(body: unknown): ValidPledge | { error: string } {
   return { name, amount_cents: Math.round(amount * 100), venmo_handle: venmo, is_private };
 }
 
-export async function verifyTurnstile(
-  secret: string,
-  token: unknown,
-  ip: string | null,
-): Promise<boolean> {
-  if (!token || typeof token !== 'string') return false;
-  const form = new FormData();
-  form.append('secret', secret);
-  form.append('response', token);
-  if (ip) form.append('remoteip', ip);
-  const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    body: form,
-  });
-  const data = (await res.json()) as { success: boolean };
-  return data.success === true;
+async function sha256Hex(value: string): Promise<string> {
+  const bytes = new TextEncoder().encode(value);
+  const hash = await crypto.subtle.digest('SHA-256', bytes);
+  return [...new Uint8Array(hash)].map((b) => b.toString(16).padStart(2, '0')).join('');
+}
+
+export async function enforceRateLimit(
+  request: Request,
+  env: Env,
+  action: string,
+  limit: number,
+  windowSeconds: number,
+): Promise<Response | null> {
+  const ip = request.headers.get('cf-connecting-ip') ?? 'unknown';
+  const now = Math.floor(Date.now() / 1000);
+  const windowStart = now - (now % windowSeconds);
+  const bucketKey = await sha256Hex(`${action}:${ip}:${windowStart}`);
+
+  const row = await env.DB.prepare(
+    `INSERT INTO rate_limits (bucket_key, action, window_start, count)
+     VALUES (?, ?, ?, 1)
+     ON CONFLICT(bucket_key) DO UPDATE SET count = count + 1
+     RETURNING count`,
+  )
+    .bind(bucketKey, action, windowStart)
+    .first<{ count: number }>();
+
+  await env.DB.prepare(`DELETE FROM rate_limits WHERE window_start < ?`)
+    .bind(now - windowSeconds * 24)
+    .run();
+
+  if ((row?.count ?? limit + 1) > limit) {
+    return jsonError(429, 'Too many attempts. Try again later.');
+  }
+
+  return null;
 }
 
 export function requireAccess(request: Request, env: Env): Response | null {

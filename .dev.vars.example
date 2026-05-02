@@ -1,10 +1,4 @@
 # Copy to .dev.vars (gitignored) for local development with `wrangler pages dev`.
-# In production, set these in the Cloudflare Pages dashboard
-# (Settings → Environment variables) instead.
-
-# Cloudflare Turnstile secret. Use the test key 1x0000000000000000000000000000000AA
-# locally if you don't want to wire up a real one.
-TURNSTILE_SECRET_KEY=1x0000000000000000000000000000000AA
 
 # Set to "1" to bypass the Cloudflare Access check on /api/admin/* during local
 # development. Do NOT set this in production.

@@ -2,9 +2,6 @@ name = "mikestarter"
 compatibility_date = "2025-04-01"
 pages_build_output_dir = "./dist"
 
-[vars]
-PUBLIC_TURNSTILE_SITE_KEY = "0x4AAAAAADAqX8Wv9hFGhxPZ"
-
 [[d1_databases]]
 binding = "DB"
 database_name = "mikestarter"

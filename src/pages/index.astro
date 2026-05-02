@@ -41,8 +41,6 @@ const tikiDrinks = [
 const crowdFavorites = ['Espresso Martini', 'Margarita', 'Daiquiri'];
 
 const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Martini', 'Negroni'];
-
-const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
 ---
 
 <Layout>
@@ -171,13 +169,6 @@ const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
             Keep my name private (show as "Anonymous" on the public list)
           </label>
         </div>
-        {TURNSTILE_KEY && (
-          <div
-            class="field cf-turnstile"
-            data-sitekey={TURNSTILE_KEY}
-            data-appearance="interaction-only"
-          ></div>
-        )}
         <button type="submit">Pledge</button>
         <p id="pledge-status" class="muted" aria-live="polite"></p>
       </form>
@@ -196,14 +187,6 @@ const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       </div>
     </section>
   </main>
-
-  {TURNSTILE_KEY && (
-    <script
-      src="https://challenges.cloudflare.com/turnstile/v0/api.js"
-      async
-      defer
-    ></script>
-  )}
 
   <script>
     type Milestone = { amount: number; label: string; desc: string };
@@ -282,11 +265,6 @@ const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
     const form = document.getElementById('pledge-form') as HTMLFormElement;
     const status = document.getElementById('pledge-status')!;
 
-    function resetTurnstile() {
-      // @ts-expect-error global injected by Turnstile script
-      if (typeof turnstile !== 'undefined') turnstile.reset();
-    }
-
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
       const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
@@ -294,15 +272,12 @@ const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
       status.textContent = 'Submitting…';
 
       const fd = new FormData(form);
-      const tsToken =
-        (form.querySelector('input[name="cf-turnstile-response"]') as HTMLInputElement | null)?.value ?? '';
 
       const body = {
         name: String(fd.get('name')).trim(),
         amount: Number(fd.get('amount')),
         venmo_handle: String(fd.get('venmo')).trim(),
         is_private: fd.get('is_private') === 'on',
-        turnstile_token: tsToken,
       };
 
       const editing = form.dataset.editingId;
@@ -320,7 +295,6 @@ const TURNSTILE_KEY = import.meta.env.PUBLIC_TURNSTILE_SITE_KEY ?? '';
         form.reset();
         delete form.dataset.editingId;
         (document.getElementById('is_private') as HTMLInputElement).checked = true;
-        resetTurnstile();
         await Promise.all([loadPledges(), loadMyPledge()]);
       } else {
         const { error } = await res

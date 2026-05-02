@@ -1,16 +1,19 @@
 import {
   type Env,
   clearEditCookie,
+  enforceRateLimit,
   jsonError,
   parseEditCookie,
   validatePledge,
-  verifyTurnstile,
 } from '../../_utils';
 
 export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
   const id = Number(params.id);
   const cookie = parseEditCookie(request);
   if (!cookie || cookie.id !== id) return jsonError(403, 'Not allowed');
+
+  const rateLimited = await enforceRateLimit(request, env, 'pledge:edit', 20, 60 * 60);
+  if (rateLimited) return rateLimited;
 
   let body: unknown;
   try {
@@ -21,15 +24,6 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
 
   const v = validatePledge(body);
   if ('error' in v) return jsonError(400, v.error);
-
-  if (env.TURNSTILE_SECRET_KEY) {
-    const ok = await verifyTurnstile(
-      env.TURNSTILE_SECRET_KEY,
-      (body as { turnstile_token?: unknown }).turnstile_token,
-      request.headers.get('cf-connecting-ip'),
-    );
-    if (!ok) return jsonError(400, 'Bot check failed. Please reload and try again.');
-  }
 
   const result = await env.DB.prepare(
     `UPDATE pledges

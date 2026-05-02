@@ -1,9 +1,9 @@
 import {
   type Env,
+  enforceRateLimit,
   jsonError,
   setEditCookie,
   validatePledge,
-  verifyTurnstile,
 } from '../_utils';
 
 export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
@@ -21,6 +21,9 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
 };
 
 export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+  const rateLimited = await enforceRateLimit(request, env, 'pledge:create', 20, 60 * 60);
+  if (rateLimited) return rateLimited;
+
   let body: unknown;
   try {
     body = await request.json();
@@ -30,15 +33,6 @@ export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
 
   const v = validatePledge(body);
   if ('error' in v) return jsonError(400, v.error);
-
-  if (env.TURNSTILE_SECRET_KEY) {
-    const ok = await verifyTurnstile(
-      env.TURNSTILE_SECRET_KEY,
-      (body as { turnstile_token?: unknown }).turnstile_token,
-      request.headers.get('cf-connecting-ip'),
-    );
-    if (!ok) return jsonError(400, 'Bot check failed. Please reload and try again.');
-  }
 
   const editToken = crypto.randomUUID();
   const row = await env.DB.prepare(
