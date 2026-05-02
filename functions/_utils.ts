@@ -39,7 +39,7 @@ export function validatePledge(body: unknown): ValidPledge | { error: string } {
   const name = String(b.name ?? '').trim();
   const venmo = String(b.venmo_handle ?? '').trim().replace(/^@/, '');
   const amount = Number(b.amount);
-  const is_private = Boolean(b.is_private);
+  const is_private = b.is_private !== false;
 
   if (!name || name.length > 50) return { error: 'Name is required (max 50 characters).' };
   if (!Number.isFinite(amount) || amount < 1 || amount > 10000) {
