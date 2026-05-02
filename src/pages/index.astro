@@ -271,38 +271,43 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       submit.disabled = true;
       status.textContent = 'Submitting…';
 
-      const fd = new FormData(form);
+      try {
+        const fd = new FormData(form);
 
-      const body = {
-        name: String(fd.get('name')).trim(),
-        amount: Number(fd.get('amount')),
-        venmo_handle: String(fd.get('venmo')).trim(),
-        is_private: fd.get('is_private') === 'on',
-      };
+        const body = {
+          name: String(fd.get('name')).trim(),
+          amount: Number(fd.get('amount')),
+          venmo_handle: String(fd.get('venmo')).trim(),
+          is_private: fd.get('is_private') === 'on',
+        };
 
-      const editing = form.dataset.editingId;
-      const url = editing ? `/api/pledges/${editing}` : '/api/pledges';
-      const method = editing ? 'PATCH' : 'POST';
+        const editing = form.dataset.editingId;
+        const url = editing ? `/api/pledges/${editing}` : '/api/pledges';
+        const method = editing ? 'PATCH' : 'POST';
 
-      const res = await fetch(url, {
-        method,
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(body),
-      });
+        const res = await fetch(url, {
+          method,
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(body),
+        });
 
-      if (res.ok) {
-        status.textContent = editing ? 'Pledge updated. Thanks!' : 'Thanks for pledging!';
-        form.reset();
-        delete form.dataset.editingId;
-        (document.getElementById('is_private') as HTMLInputElement).checked = true;
-        await Promise.all([loadPledges(), loadMyPledge()]);
-      } else {
-        const { error } = await res
-          .json()
-          .catch(() => ({ error: 'Something went wrong' }));
-        status.textContent = `Error: ${error}`;
+        if (res.ok) {
+          status.textContent = editing ? 'Pledge updated. Thanks!' : 'Thanks for pledging!';
+          form.reset();
+          delete form.dataset.editingId;
+          (document.getElementById('is_private') as HTMLInputElement).checked = true;
+          await Promise.all([loadPledges(), loadMyPledge()]);
+        } else {
+          const { error } = await res
+            .json()
+            .catch(() => ({ error: 'Something went wrong' }));
+          status.textContent = `Error: ${error}`;
+        }
+      } catch {
+        status.textContent = 'Error: Something went wrong. Please try again.';
+      } finally {
+        submit.disabled = false;
       }
-      submit.disabled = false;
     });
 
     async function loadMyPledge() {
