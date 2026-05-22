@@ -1,5 +1,5 @@
 {
-  "name": "mikestarter",
+  "name": "grunglebird",
   "version": "0.1.0",
   "private": true,
   "type": "module",
@@ -8,8 +8,8 @@
     "build": "astro build",
     "preview": "wrangler pages dev ./dist",
     "deploy": "astro build && wrangler pages deploy ./dist",
-    "db:migrate:local": "wrangler d1 migrations apply mikestarter --local",
-    "db:migrate:remote": "wrangler d1 migrations apply mikestarter --remote",
+    "db:migrate:local": "wrangler d1 migrations apply grunglebird-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply grunglebird-db --remote",
     "astro": "astro"
   },
   "dependencies": {
