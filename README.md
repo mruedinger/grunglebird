@@ -25,18 +25,19 @@ A small donation site for stocking the bar at our summer beach trip.
 
 ```sh
 npm install
+npm run db:migrate:local   # one-time: apply the schema to the local SQLite D1
 npm run dev
 ```
 
-`astro dev` serves both the pages and the API routes against a local SQLite D1
-via Cloudflare's Vite plugin. The Cloudflare Access bypass on `/api/admin/*` is
-automatic during dev (driven by `import.meta.env.DEV`, statically removed at
-build time).
+`astro dev` serves both the pages and the API routes against the local D1
+via Cloudflare's Vite plugin. Without `db:migrate:local`, API routes will 500
+with `no such table: pledges`. The Cloudflare Access bypass on `/api/admin/*`
+is automatic during dev (driven by `import.meta.env.DEV`, statically removed
+at build time).
 
 To exercise the production build locally on the Workers runtime:
 
 ```sh
-npm run db:migrate:local   # apply the schema to a local SQLite DB
 npm run preview            # astro build + astro preview on workerd
 ```
 
