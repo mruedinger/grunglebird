@@ -1,7 +1,4 @@
-export interface Env {
-  DB: D1Database;
-  DEV?: string;
-}
+export type Env = Cloudflare.Env;
 
 export function jsonError(status: number, error: string): Response {
   return new Response(JSON.stringify({ error }), {
@@ -88,8 +85,8 @@ export async function enforceRateLimit(
   return null;
 }
 
-export function requireAccess(request: Request, env: Env): Response | null {
-  if (env.DEV === '1') return null;
+export function requireAccess(request: Request, _env: Env): Response | null {
+  if (import.meta.env.DEV) return null;
   const jwt = request.headers.get('cf-access-jwt-assertion');
   if (!jwt) return jsonError(401, 'Cloudflare Access required');
   return null;

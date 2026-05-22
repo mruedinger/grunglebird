@@ -298,9 +298,9 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
           (document.getElementById('is_private') as HTMLInputElement).checked = true;
           await Promise.all([loadPledges(), loadMyPledge()]);
         } else {
-          const { error } = await res
+          const { error } = (await res
             .json()
-            .catch(() => ({ error: 'Something went wrong' }));
+            .catch(() => ({ error: 'Something went wrong' }))) as { error: string };
           status.textContent = `Error: ${error}`;
         }
       } catch {

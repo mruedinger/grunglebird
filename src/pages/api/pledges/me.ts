@@ -1,6 +1,8 @@
-import { type Env, jsonError, parseEditCookie } from '../../_utils';
+import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { jsonError, parseEditCookie } from '../../../lib/api-utils';
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const GET: APIRoute = async ({ request }) => {
   const cookie = parseEditCookie(request);
   if (!cookie) return jsonError(404, 'No pledge for this browser');
 
