@@ -1,23 +1,26 @@
 {
-  "name": "mikestarter",
+  "name": "grunglebird",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "astro dev",
     "build": "astro build",
-    "preview": "wrangler pages dev ./dist",
-    "deploy": "astro build && wrangler pages deploy ./dist",
-    "db:migrate:local": "wrangler d1 migrations apply mikestarter --local",
-    "db:migrate:remote": "wrangler d1 migrations apply mikestarter --remote",
+    "preview": "astro build && astro preview",
+    "deploy": "astro build && wrangler deploy",
+    "check": "astro check",
+    "generate-types": "wrangler types",
+    "db:migrate:local": "wrangler d1 migrations apply grunglebird-db --local",
+    "db:migrate:remote": "wrangler d1 migrations apply grunglebird-db --remote",
     "astro": "astro"
   },
   "dependencies": {
-    "astro": "^5.0.0"
+    "@astrojs/cloudflare": "^13.5.4",
+    "astro": "^6.3.7"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^4.20250101.0",
+    "@astrojs/check": "^0.9.9",
     "typescript": "^5.4.0",
-    "wrangler": "^3.80.0"
+    "wrangler": "^4.93.1"
   }
 }

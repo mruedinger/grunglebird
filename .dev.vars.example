@@ -1,5 +1,0 @@
-# Copy to .dev.vars (gitignored) for local development with `wrangler pages dev`.
-
-# Set to "1" to bypass the Cloudflare Access check on /api/admin/* during local
-# development. Do NOT set this in production.
-DEV=1

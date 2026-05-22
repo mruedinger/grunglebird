@@ -1,13 +1,14 @@
+import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import {
-  type Env,
   clearEditCookie,
   enforceRateLimit,
   jsonError,
   parseEditCookie,
   validatePledge,
-} from '../../_utils';
+} from '../../../lib/api-utils';
 
-export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
+export const PATCH: APIRoute = async ({ request, params }) => {
   const id = Number(params.id);
   const cookie = parseEditCookie(request);
   if (!cookie || cookie.id !== id) return jsonError(403, 'Not allowed');
@@ -37,7 +38,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   return Response.json({ ok: true });
 };
 
-export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
+export const DELETE: APIRoute = async ({ request, params }) => {
   const id = Number(params.id);
   const cookie = parseEditCookie(request);
   if (!cookie || cookie.id !== id) return jsonError(403, 'Not allowed');

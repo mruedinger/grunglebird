@@ -1,6 +1,8 @@
-import { type Env, jsonError, requireAccess } from '../../../_utils';
+import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { jsonError, requireAccess } from '../../../../lib/api-utils';
 
-export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params }) => {
+export const PATCH: APIRoute = async ({ request, params }) => {
   const denied = requireAccess(request, env);
   if (denied) return denied;
 
@@ -23,7 +25,7 @@ export const onRequestPatch: PagesFunction<Env> = async ({ request, env, params 
   return Response.json({ ok: true });
 };
 
-export const onRequestDelete: PagesFunction<Env> = async ({ request, env, params }) => {
+export const DELETE: APIRoute = async ({ request, params }) => {
   const denied = requireAccess(request, env);
   if (denied) return denied;
 

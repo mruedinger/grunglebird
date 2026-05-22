@@ -1,6 +1,8 @@
-import { type Env, requireAccess } from '../../_utils';
+import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
+import { requireAccess } from '../../../lib/api-utils';
 
-export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
+export const GET: APIRoute = async ({ request }) => {
   const denied = requireAccess(request, env);
   if (denied) return denied;
 

@@ -1,10 +1,13 @@
-name = "mikestarter"
-compatibility_date = "2025-04-01"
-pages_build_output_dir = "./dist"
+name = "grunglebird"
+main = "@astrojs/cloudflare/entrypoints/server"
+compatibility_date = "2026-05-21"
+
+[assets]
+binding = "ASSETS"
+directory = "./dist"
 
 [[d1_databases]]
 binding = "DB"
-database_name = "mikestarter"
-# Replace with the real database_id printed by `wrangler d1 create mikestarter`
-database_id = "c6efb0bc-5cde-4abb-8cd8-5096ca0f9675"
+database_name = "grunglebird-db"
+database_id = "145f538f-f9b9-4d39-8911-bd8eb0b6c779"
 migrations_dir = "migrations"

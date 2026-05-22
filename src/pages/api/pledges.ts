@@ -1,12 +1,13 @@
+import type { APIRoute } from 'astro';
+import { env } from 'cloudflare:workers';
 import {
-  type Env,
   enforceRateLimit,
   jsonError,
   setEditCookie,
   validatePledge,
-} from '../_utils';
+} from '../../lib/api-utils';
 
-export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
+export const GET: APIRoute = async () => {
   const { results } = await env.DB.prepare(
     `SELECT id,
             CASE WHEN is_private = 1 THEN NULL ELSE name END AS name,
@@ -20,7 +21,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
   return Response.json({ pledges: results, total_cents: total });
 };
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const POST: APIRoute = async ({ request }) => {
   const rateLimited = await enforceRateLimit(request, env, 'pledge:create', 20, 60 * 60);
   if (rateLimited) return rateLimited;
 

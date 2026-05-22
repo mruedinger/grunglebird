@@ -145,7 +145,7 @@ Seeding the **generic category row** (e.g. Bourbon) with a representative price 
 
 ### Auth
 
-- **Writes** (create/edit/delete ingredients): gated by `cf-access-jwt-assertion` header, same pattern as existing admin endpoints in `/functions/api/admin/`.
+- **Writes** (create/edit/delete ingredients): gated by `cf-access-jwt-assertion` header, same pattern as existing admin endpoints in `/src/pages/api/admin/`.
 - **Reads** (list, view): public, no auth.
 
 ### API routes (Phase 1 implementation, not in this commit)
@@ -159,8 +159,8 @@ Seeding the **generic category row** (e.g. Bourbon) with a representative price 
 ### Files to add (Phase 1 implementation, not in this commit)
 
 - `/migrations/0003_ingredients.sql` — the table above. (Stub `recipes` table forward-declared as well, or the FK column added in a later migration once Phase 2 lands.)
-- `/functions/api/ingredients.ts` — list + create.
-- `/functions/api/ingredients/[id].ts` — get + patch + delete.
+- `/src/pages/api/ingredients.ts` — list + create.
+- `/src/pages/api/ingredients/[id].ts` — get + patch + delete.
 - `/src/pages/admin.astro` — extend to include ingredient CRUD UI.
 
 ### Open questions / deferred
