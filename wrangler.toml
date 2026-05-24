@@ -11,3 +11,7 @@ binding = "DB"
 database_name = "grunglebird-db"
 database_id = "145f538f-f9b9-4d39-8911-bd8eb0b6c779"
 migrations_dir = "migrations"
+
+[observability.logs]
+enabled = true
+invocation_logs = true
