@@ -16,6 +16,7 @@
   },
   "dependencies": {
     "@astrojs/cloudflare": "^13.5.4",
+    "@simplewebauthn/server": "^13.3.0",
     "astro": "^6.3.7"
   },
   "devDependencies": {
