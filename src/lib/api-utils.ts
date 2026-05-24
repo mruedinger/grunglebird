@@ -84,10 +84,3 @@ export async function enforceRateLimit(
 
   return null;
 }
-
-export function requireAccess(request: Request, _env: Env): Response | null {
-  if (import.meta.env.DEV) return null;
-  const jwt = request.headers.get('cf-access-jwt-assertion');
-  if (!jwt) return jsonError(401, 'Cloudflare Access required');
-  return null;
-}

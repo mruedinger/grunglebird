@@ -1,9 +1,10 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { jsonError, requireAccess } from '../../../../lib/api-utils';
+import { jsonError } from '../../../../lib/api-utils';
+import { type AuthEnv, requireAdmin } from '../../../../lib/auth';
 
 export const PATCH: APIRoute = async ({ request, params }) => {
-  const denied = requireAccess(request, env);
+  const denied = await requireAdmin(request, env as AuthEnv);
   if (denied) return denied;
 
   const id = Number(params.id);
@@ -26,7 +27,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
 };
 
 export const DELETE: APIRoute = async ({ request, params }) => {
-  const denied = requireAccess(request, env);
+  const denied = await requireAdmin(request, env as AuthEnv);
   if (denied) return denied;
 
   await env.DB.prepare(`DELETE FROM pledges WHERE id = ?`).bind(Number(params.id)).run();

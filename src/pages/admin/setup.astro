@@ -1,0 +1,83 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { env } from 'cloudflare:workers';
+import { type AuthEnv } from '../../lib/auth';
+
+const authEnv = env as AuthEnv;
+const token = Astro.url.searchParams.get('token') ?? '';
+const row = await authEnv.DB.prepare('SELECT COUNT(*) AS n FROM credentials').first<{ n: number }>();
+const isEmpty = (row?.n ?? 0) === 0;
+const tokenOk = !!authEnv.SETUP_TOKEN && token.length > 0 && token === authEnv.SETUP_TOKEN;
+const allowed = isEmpty && tokenOk;
+
+// Don't confirm the route exists (or that bootstrap is already done) to an unauthorized visitor.
+if (!allowed) Astro.response.status = 404;
+---
+
+{allowed ? (
+  <Layout title="Set up admin — Mike's Beach Bar">
+    <main class="container setup">
+      <h1>Set up admin access</h1>
+      <p class="muted">
+        Register your first passkey (store it in 1Password so it syncs to your other devices).
+        You'll get a one-time recovery code — save it.
+      </p>
+      <button id="setup-btn">Register passkey</button>
+      <p class="setup-msg muted" id="setup-msg"></p>
+    </main>
+
+    <script>
+      import { register } from '../../lib/webauthn-client';
+
+      const token = new URLSearchParams(location.search).get('token') ?? '';
+      const btn = document.getElementById('setup-btn') as HTMLButtonElement;
+      const msg = document.getElementById('setup-msg')!;
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        msg.textContent = 'Waiting for your passkey…';
+        try {
+          const opts = await (
+            await fetch(`/api/admin/auth/options?mode=register&token=${encodeURIComponent(token)}`)
+          ).json();
+          const attestation = await register(opts);
+          const res = await fetch(`/api/admin/auth/register?token=${encodeURIComponent(token)}`, {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(attestation),
+          });
+          if (res.ok) {
+            const { recoveryCode } = (await res.json()) as { recoveryCode?: string };
+            msg.innerHTML =
+              `Passkey registered. <strong>Save this recovery code in 1Password — it won't be shown again:</strong>` +
+              `<br><code>${recoveryCode ?? '(already set)'}</code><br><br>` +
+              `Now run <code>wrangler secret delete SETUP_TOKEN</code>, then go to <a href="/admin">/admin</a>.`;
+            btn.style.display = 'none';
+          } else {
+            const { error } = (await res
+              .json()
+              .catch(() => ({ error: 'Registration failed' }))) as { error?: string };
+            msg.textContent = error ?? 'Registration failed';
+            btn.disabled = false;
+          }
+        } catch (e) {
+          msg.textContent = (e as Error).message || 'Cancelled';
+          btn.disabled = false;
+        }
+      });
+    </script>
+
+    <style>
+      .setup { max-width: 32rem; }
+      .setup button { padding: 0.5rem 1rem; }
+      .setup-msg { min-height: 1.2em; margin-top: 1rem; }
+      code { background: var(--sand-dark); padding: 0.1rem 0.3rem; border-radius: 4px; }
+    </style>
+  </Layout>
+) : (
+  <Layout title="Not found">
+    <main class="container">
+      <h1>Not found</h1>
+    </main>
+  </Layout>
+)}

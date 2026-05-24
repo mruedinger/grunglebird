@@ -1,9 +1,9 @@
 import type { APIRoute } from 'astro';
 import { env } from 'cloudflare:workers';
-import { requireAccess } from '../../../lib/api-utils';
+import { type AuthEnv, requireAdmin } from '../../../lib/auth';
 
 export const GET: APIRoute = async ({ request }) => {
-  const denied = requireAccess(request, env);
+  const denied = await requireAdmin(request, env as AuthEnv);
   if (denied) return denied;
 
   const { results } = await env.DB.prepare(

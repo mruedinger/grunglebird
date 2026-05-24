@@ -1,34 +1,116 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { env } from 'cloudflare:workers';
+import { type AuthEnv, getSession } from '../lib/auth';
+
+const authed = await getSession(Astro.request, env as AuthEnv);
 ---
 
 <Layout title="Admin — Mike's Beach Bar">
   <main class="container">
-    <h1>Pledges (admin)</h1>
-    <p class="muted">
-      Total: <strong id="total">…</strong>
-    </p>
-    <div class="table-wrap">
-      <table id="pledges">
-        <thead>
-          <tr>
-            <th>Date</th>
-            <th>Name</th>
-            <th>Amount</th>
-            <th>Venmo</th>
-            <th>Private</th>
-            <th>Paid</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr><td colspan="7" class="muted">Loading…</td></tr>
-        </tbody>
-      </table>
-    </div>
+    {authed ? (
+      <>
+        <div class="admin-head">
+          <h1>Pledges (admin)</h1>
+          <button id="logout" class="ghost">Log out</button>
+        </div>
+        <p class="muted">
+          Total: <strong id="total">…</strong>
+        </p>
+        <div class="table-wrap">
+          <table id="pledges">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Amount</th>
+                <th>Venmo</th>
+                <th>Private</th>
+                <th>Paid</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="7" class="muted">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+        <p class="muted addkey-row">
+          <button id="add-passkey" class="ghost">Add a passkey to this account</button>
+        </p>
+      </>
+    ) : (
+      <section id="signin" class="signin">
+        <h1>Admin sign-in</h1>
+        <p class="muted">Sign in with your passkey to manage pledges.</p>
+        <button id="signin-btn">Sign in with passkey</button>
+        <p class="signin-msg muted" id="signin-msg"></p>
+        <details class="recovery">
+          <summary>Use a recovery code</summary>
+          <form id="recovery-form">
+            <input type="text" id="recovery-code" placeholder="Recovery code" autocomplete="off" />
+            <button type="submit">Sign in</button>
+          </form>
+        </details>
+      </section>
+    )}
   </main>
 
   <script>
+    import { authenticate, register } from '../lib/webauthn-client';
+
+    // --- Unauthenticated: sign-in + recovery ---
+    const signin = document.getElementById('signin');
+    if (signin) {
+      const msg = document.getElementById('signin-msg')!;
+      const btn = document.getElementById('signin-btn') as HTMLButtonElement;
+
+      btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        msg.textContent = 'Waiting for your passkey…';
+        try {
+          const opts = await (await fetch('/api/admin/auth/options?mode=auth')).json();
+          const assertion = await authenticate(opts);
+          const res = await fetch('/api/admin/auth/verify', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(assertion),
+          });
+          if (res.ok) location.reload();
+          else {
+            const { error } = (await res
+              .json()
+              .catch(() => ({ error: 'Sign-in failed' }))) as { error?: string };
+            msg.textContent = error ?? 'Sign-in failed';
+            btn.disabled = false;
+          }
+        } catch (e) {
+          msg.textContent = (e as Error).message || 'Sign-in cancelled';
+          btn.disabled = false;
+        }
+      });
+
+      const form = document.getElementById('recovery-form') as HTMLFormElement;
+      form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const code = (document.getElementById('recovery-code') as HTMLInputElement).value.trim();
+        if (!code) return;
+        const res = await fetch('/api/admin/auth/recovery', {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify({ code }),
+        });
+        if (res.ok) location.reload();
+        else {
+          const { error } = (await res
+            .json()
+            .catch(() => ({ error: 'Invalid recovery code' }))) as { error?: string };
+          msg.textContent = error ?? 'Invalid recovery code';
+        }
+      });
+    }
+
+    // --- Authenticated: table, logout, add-passkey ---
     type AdminPledge = {
       id: number;
       name: string;
@@ -39,79 +121,120 @@ import Layout from '../layouts/Layout.astro';
       created_at: number;
     };
 
-    const fmt = (c: number) => `$${(c / 100).toFixed(c % 100 === 0 ? 0 : 2)}`;
-    const escapeHtml = (s: string) =>
-      s.replace(/[&<>"']/g, (c) =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+    const table = document.getElementById('pledges');
+    if (table) {
+      const fmt = (c: number) => `$${(c / 100).toFixed(c % 100 === 0 ? 0 : 2)}`;
+      const escapeHtml = (s: string) =>
+        s.replace(/[&<>"']/g, (c) =>
+          ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
+        );
+
+      const tbody = table.querySelector('tbody')!;
+
+      async function load() {
+        const res = await fetch('/api/admin/pledges');
+        if (res.status === 401) {
+          location.reload();
+          return;
+        }
+        if (!res.ok) {
+          tbody.innerHTML = `<tr><td colspan="7">Failed to load (${res.status}).</td></tr>`;
+          return;
+        }
+        const { pledges, total_cents } = (await res.json()) as {
+          pledges: AdminPledge[];
+          total_cents: number;
+        };
+        const unpaid = pledges.filter((p) => !p.is_paid).reduce((s, p) => s + p.amount_cents, 0);
+        document.getElementById('total')!.textContent =
+          `${fmt(total_cents)} across ${pledges.length} pledge${pledges.length === 1 ? '' : 's'} (${fmt(unpaid)} unpaid)`;
+
+        tbody.innerHTML = '';
+        if (pledges.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="7" class="muted">No pledges yet.</td></tr>';
+          return;
+        }
+        for (const p of pledges) {
+          const tr = document.createElement('tr');
+          if (p.is_paid) tr.classList.add('paid');
+          const date = new Date(p.created_at * 1000).toLocaleDateString();
+          tr.innerHTML = `
+            <td>${date}</td>
+            <td>${escapeHtml(p.name)}</td>
+            <td class="amt">${fmt(p.amount_cents)}</td>
+            <td>@${escapeHtml(p.venmo_handle.replace(/^@+/, ''))}</td>
+            <td>${p.is_private ? 'yes' : 'no'}</td>
+            <td><label><input type="checkbox" data-id="${p.id}" class="paid-toggle" ${p.is_paid ? 'checked' : ''}/></label></td>
+            <td><button data-id="${p.id}" class="del">Delete</button></td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+        tbody.querySelectorAll<HTMLInputElement>('.paid-toggle').forEach((cb) => {
+          cb.addEventListener('change', async () => {
+            const r = await fetch(`/api/admin/pledges/${cb.dataset.id}`, {
+              method: 'PATCH',
+              headers: { 'content-type': 'application/json' },
+              body: JSON.stringify({ is_paid: cb.checked }),
+            });
+            if (!r.ok) {
+              alert('Update failed');
+              cb.checked = !cb.checked;
+            } else {
+              await load();
+            }
+          });
+        });
+
+        tbody.querySelectorAll<HTMLButtonElement>('.del').forEach((btn) => {
+          btn.addEventListener('click', async () => {
+            if (!confirm('Delete this pledge?')) return;
+            const r = await fetch(`/api/admin/pledges/${btn.dataset.id}`, { method: 'DELETE' });
+            if (r.ok) await load();
+            else alert('Delete failed');
+          });
+        });
+      }
+
+      document.getElementById('logout')!.addEventListener('click', async () => {
+        await fetch('/api/admin/auth/logout', { method: 'POST' });
+        location.reload();
+      });
+
+      document.getElementById('add-passkey')!.addEventListener('click', async () => {
+        try {
+          const opts = await (await fetch('/api/admin/auth/options?mode=register')).json();
+          const attestation = await register(opts);
+          const res = await fetch('/api/admin/auth/register', {
+            method: 'POST',
+            headers: { 'content-type': 'application/json' },
+            body: JSON.stringify(attestation),
+          });
+          if (res.ok) {
+            const { recoveryCode } = (await res.json()) as { recoveryCode?: string };
+            if (recoveryCode) {
+              alert(`Passkey added. New recovery code (save it in 1Password):\n\n${recoveryCode}`);
+            } else {
+              alert('Passkey added.');
+            }
+          } else {
+            const { error } = (await res
+              .json()
+              .catch(() => ({ error: 'Could not add passkey' }))) as { error?: string };
+            alert(error ?? 'Could not add passkey');
+          }
+        } catch (e) {
+          alert((e as Error).message || 'Cancelled');
+        }
+      }
       );
 
-    const tbody = document.querySelector('#pledges tbody')!;
-
-    async function load() {
-      const res = await fetch('/api/admin/pledges');
-      if (!res.ok) {
-        tbody.innerHTML = `<tr><td colspan="7">Auth failed (${res.status}). Make sure you're signed in via Cloudflare Access.</td></tr>`;
-        return;
-      }
-      const { pledges, total_cents } = (await res.json()) as {
-        pledges: AdminPledge[];
-        total_cents: number;
-      };
-      const unpaid = pledges.filter((p) => !p.is_paid).reduce((s, p) => s + p.amount_cents, 0);
-      document.getElementById('total')!.textContent =
-        `${fmt(total_cents)} across ${pledges.length} pledge${pledges.length === 1 ? '' : 's'} (${fmt(unpaid)} unpaid)`;
-
-      tbody.innerHTML = '';
-      if (pledges.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" class="muted">No pledges yet.</td></tr>';
-        return;
-      }
-      for (const p of pledges) {
-        const tr = document.createElement('tr');
-        if (p.is_paid) tr.classList.add('paid');
-        const date = new Date(p.created_at * 1000).toLocaleDateString();
-        tr.innerHTML = `
-          <td>${date}</td>
-          <td>${escapeHtml(p.name)}</td>
-          <td class="amt">${fmt(p.amount_cents)}</td>
-          <td>@${escapeHtml(p.venmo_handle.replace(/^@+/, ''))}</td>
-          <td>${p.is_private ? 'yes' : 'no'}</td>
-          <td><label><input type="checkbox" data-id="${p.id}" class="paid-toggle" ${p.is_paid ? 'checked' : ''}/></label></td>
-          <td><button data-id="${p.id}" class="del">Delete</button></td>
-        `;
-        tbody.appendChild(tr);
-      }
-
-      tbody.querySelectorAll<HTMLInputElement>('.paid-toggle').forEach((cb) => {
-        cb.addEventListener('change', async () => {
-          const r = await fetch(`/api/admin/pledges/${cb.dataset.id}`, {
-            method: 'PATCH',
-            headers: { 'content-type': 'application/json' },
-            body: JSON.stringify({ is_paid: cb.checked }),
-          });
-          if (!r.ok) {
-            alert('Update failed');
-            cb.checked = !cb.checked;
-          } else {
-            await load();
-          }
-        });
-      });
-
-      tbody.querySelectorAll<HTMLButtonElement>('.del').forEach((btn) => {
-        btn.addEventListener('click', async () => {
-          if (!confirm('Delete this pledge?')) return;
-          const r = await fetch(`/api/admin/pledges/${btn.dataset.id}`, { method: 'DELETE' });
-          if (r.ok) await load();
-          else alert('Delete failed');
-        });
-      });
+      load();
     }
-
-    load();
   </script>
 
   <style>
+    .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
@@ -142,5 +265,18 @@ import Layout from '../layouts/Layout.astro';
       font-size: 0.85rem;
     }
     button.del:hover { background: var(--sunset); color: white; }
+    button.ghost {
+      background: transparent;
+      border: 1px solid var(--line);
+      padding: 0.35rem 0.7rem;
+      font-size: 0.85rem;
+    }
+    .addkey-row { margin-top: 1rem; }
+    .signin { max-width: 24rem; }
+    .signin button { padding: 0.5rem 1rem; }
+    .signin-msg { min-height: 1.2em; }
+    .recovery { margin-top: 1.5rem; }
+    .recovery form { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
+    .recovery input { flex: 1; padding: 0.4rem; }
   </style>
 </Layout>
