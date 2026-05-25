@@ -10,10 +10,7 @@ const authed = await getSession(Astro.request, env as AuthEnv);
   <main class="container">
     {authed ? (
       <>
-        <div class="admin-head">
-          <h1>Pledges (admin)</h1>
-          <button id="logout" class="ghost">Log out</button>
-        </div>
+        <h1>Pledges (admin)</h1>
         <p class="muted">
           Total: <strong id="total">…</strong>
         </p>
@@ -35,9 +32,10 @@ const authed = await getSession(Astro.request, env as AuthEnv);
             </tbody>
           </table>
         </div>
-        <p class="muted addkey-row">
+        <div class="admin-actions">
           <button id="add-passkey" class="ghost">Add a passkey to this account</button>
-        </p>
+          <button id="logout" class="ghost">Log out</button>
+        </div>
       </>
     ) : (
       <section id="signin" class="signin">
@@ -234,7 +232,6 @@ const authed = await getSession(Astro.request, env as AuthEnv);
   </script>
 
   <style>
-    .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; }
     .table-wrap { overflow-x: auto; }
     table {
       width: 100%;
@@ -266,13 +263,22 @@ const authed = await getSession(Astro.request, env as AuthEnv);
     }
     button.del:hover { background: var(--sunset); color: white; }
     button.ghost {
-      background: transparent;
+      background: var(--paper);
+      color: var(--ink);
       border: 1px solid var(--line);
       padding: 0.35rem 0.7rem;
       font-size: 0.85rem;
+      font-weight: 600;
     }
-    .addkey-row { margin-top: 1rem; }
-    .signin { max-width: 24rem; }
+    button.ghost:hover { background: var(--sand-dark); }
+    .admin-actions {
+      display: flex;
+      gap: 0.75rem;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 1.5rem;
+    }
+    .signin { max-width: 24rem; margin: 0 auto; }
     .signin button { padding: 0.5rem 1rem; }
     .signin-msg { min-height: 1.2em; }
     .recovery { margin-top: 1.5rem; }
