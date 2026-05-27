@@ -33,8 +33,8 @@ const authed = await getSession(Astro.request, env as AuthEnv);
           </table>
         </div>
         <div class="admin-actions">
-          <button id="add-passkey" class="ghost">Add a passkey to this account</button>
-          <button id="logout" class="ghost">Log out</button>
+          <button id="add-passkey" class="ghost sm">Add a passkey to this account</button>
+          <button id="logout" class="ghost sm">Log out</button>
         </div>
       </>
     ) : (
@@ -163,7 +163,7 @@ const authed = await getSession(Astro.request, env as AuthEnv);
             <td>@${escapeHtml(p.venmo_handle.replace(/^@+/, ''))}</td>
             <td>${p.is_private ? 'yes' : 'no'}</td>
             <td><label><input type="checkbox" data-id="${p.id}" class="paid-toggle" ${p.is_paid ? 'checked' : ''}/></label></td>
-            <td><button data-id="${p.id}" class="del">Delete</button></td>
+            <td><button data-id="${p.id}" class="del danger sm">Delete</button></td>
           `;
           tbody.appendChild(tr);
         }
@@ -236,8 +236,8 @@ const authed = await getSession(Astro.request, env as AuthEnv);
     table {
       width: 100%;
       border-collapse: collapse;
-      background: var(--paper);
-      border: 1px solid var(--line);
+      background: var(--surface);
+      border: 1px solid var(--hair);
       border-radius: 8px;
       overflow: hidden;
       font-size: 0.9rem;
@@ -245,32 +245,17 @@ const authed = await getSession(Astro.request, env as AuthEnv);
     th, td {
       padding: 0.5rem 0.75rem;
       text-align: left;
-      border-bottom: 1px solid var(--line);
+      border-bottom: 1px solid var(--hair);
       vertical-align: middle;
     }
     th {
-      background: var(--sand-dark);
-      font-family: Georgia, serif;
+      background: color-mix(in srgb, var(--text) 6%, transparent);
+      font-family: var(--font-display);
     }
     td.amt { font-weight: 600; }
     tr.paid td { opacity: 0.55; text-decoration: line-through; }
-    button.del {
-      background: transparent;
-      border: 1px solid var(--sunset);
-      color: var(--sunset);
-      padding: 0.25rem 0.6rem;
-      font-size: 0.85rem;
-    }
-    button.del:hover { background: var(--sunset); color: white; }
-    button.ghost {
-      background: var(--paper);
-      color: var(--ink);
-      border: 1px solid var(--line);
-      padding: 0.35rem 0.7rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-    button.ghost:hover { background: var(--sand-dark); }
+    /* Delete uses the shared .danger.sm button variant; .del is just the JS hook.
+       "Add a passkey" / "Log out" use the shared .ghost.sm variant. */
     .admin-actions {
       display: flex;
       gap: 0.75rem;

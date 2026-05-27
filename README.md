@@ -5,12 +5,30 @@ The site at <https://grunglebird.com>. Built with
 for hosting, and [Cloudflare D1](https://developers.cloudflare.com/d1/) for storage.
 Admin login is self-hosted WebAuthn (passkeys) — see [Admin auth](#admin-auth).
 
-## Donate — Mike's Beach Bar
+## Routes
 
-A small donation site for stocking the bar at our summer beach trip.
+The site is a shared shell (header nav + footer + one design-token system) that
+every page renders inside. The default theme is the "Campari" dark palette; a
+theme is just a token-value override (`[data-theme="…"]`), so a page or event can
+retint the whole shell without changing its structure.
 
-- Public landing page with the menu, funding milestones ($500 / $750 / $1000),
-  suggested donation amounts, and a live progress meter
+| Route | What | In nav |
+|---|---|---|
+| `/` | Home / about — promo pill for the current event + the Grungle Bird namesake teaser | logo → home |
+| `/cocktails` | Recipe & ingredient library (Grungle Bird recipe card today; built out later) | yes |
+| `/tools` | Bar utilities — spirit finder (coming soon); a permanent bucket for more tools | yes |
+| `/events` | Index of events; points at the current one | yes |
+| `/events/framily-beach-bar-2026` | Mike's Beach Bar — the event page with its pledge form, beach-themed | via `/events` + home |
+| `/juice` | Superjuice (pseudo-citrus) calculators — parked utility, not in nav | no |
+| `/admin` | Admin sign-in / pledge management — the permanent sign-in escape hatch | affordance shown only when signed in |
+
+## Mike's Beach Bar
+
+The Mike's Beach Bar event page, where friends pledge toward stocking the bar
+for our summer beach trip, at `/events/framily-beach-bar-2026`.
+
+- The event page shows the menu, funding milestones ($500 / $750 / $1000),
+  suggested pledge amounts, and a live progress meter
 - Pledge form: name, dollar amount, Venmo handle, and a "keep my name private"
   checkbox (defaults to private)
 - Public pledge list shows real names or "Anonymous"; Venmo handles are admin-only
@@ -134,14 +152,22 @@ a new one is generated the next time you register a passkey while none is stored
 │   ├── 0002_rate_limits.sql    # write throttle buckets
 │   └── 0003_credentials.sql    # passkey credentials + auth_meta (recovery hash)
 ├── src/
-│   ├── layouts/Layout.astro
+│   ├── layouts/Layout.astro    # shared shell: header nav + footer + per-event theme
+│   ├── styles/global.css       # design tokens + shared primitives (single source of truth)
+│   ├── components/
+│   │   └── PromoPill.astro      # reusable "what's on" promo capsule
 │   ├── lib/
 │   │   ├── api-utils.ts        # validation, cookies, rate limits
 │   │   ├── auth.ts             # session cookie, admin guards, WebAuthn helpers
 │   │   └── webauthn-client.ts  # browser-side passkey ceremony
 │   └── pages/
-│       ├── index.astro         # donate page
-│       ├── tools.astro         # bar calculators
+│       ├── index.astro         # home / about
+│       ├── cocktails.astro     # recipe library (Grungle Bird card)
+│       ├── tools.astro         # spirit finder (coming soon)
+│       ├── juice.astro         # superjuice calculators (not in nav)
+│       ├── events/
+│       │   ├── index.astro     # events index
+│       │   └── framily-beach-bar-2026.astro  # Mike's Beach Bar event page — pledge form (beach-themed)
 │       ├── admin.astro         # sign-in (unauthed) / admin table (authed)
 │       ├── admin/setup.astro   # one-time bootstrap registration (token-gated)
 │       └── api/
