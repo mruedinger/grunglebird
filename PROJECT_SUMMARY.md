@@ -19,5 +19,5 @@ Other people will likely only browse the site a few times a year.
 * Cocktail recipes - hand-curated database of cocktail recipes. Has a builder for adding recipes and a searchable interface for finding and sharing them.
 * Spirit finder - search interface that queries multiple ABC (Alcoholic Beverage Control) store inventories for specific items.
 	- stretch: tie in with ingredient inventory to set alerts on availability or price change
-* Donation/events - used to share a menu preview for upcoming events, and allow others to donate to fund the bar for necessary supplies
+* Events - used to share a menu preview for upcoming events, and let others pledge to fund the bar for necessary supplies
 * Analytics - used to capture data on things like most frequently ordered drinks, trends over time, individual preferences, and other interesting data during or after an event.

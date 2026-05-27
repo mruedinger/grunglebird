@@ -1,0 +1,85 @@
+---
+import Layout from "../layouts/Layout.astro";
+
+const grungleBird = [
+  { amount: "1 oz", ingredient: "Planteray OFTD" },
+  { amount: "½ oz", ingredient: "Smith & Cross" },
+  { amount: "¾ oz", ingredient: "Campari" },
+  { amount: "½ oz", ingredient: "Demerara syrup" },
+  { amount: "1 oz", ingredient: "Lime juice" },
+  { amount: "1½ oz", ingredient: "Grapefruit juice" },
+  { amount: "2 dash", ingredient: "Crude Tropi-500 bitters" },
+];
+---
+
+<Layout title="Cocktails — grunglebird" active="cocktails">
+  <main class="container center">
+    <h1 class="page-title">Cocktails</h1>
+
+    <article class="card recipe-card">
+      <h3>Grungle Bird</h3>
+      <p class="recipe-desc">funky, citrusy, bittersweet</p>
+      <ul>
+        {
+          grungleBird.map((row) => (
+            <li>
+              <span class="amt">{row.amount}</span>
+              <span class="ing">{row.ingredient}</span>
+            </li>
+          ))
+        }
+      </ul>
+      <p class="method">Pebble ice. Shake. Open pour.</p>
+    </article>
+  </main>
+
+  <style>
+    /* layout only — surface/border/radius/padding come from the shared .card */
+    .recipe-card {
+      max-width: 340px;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .recipe-card h3 {
+      font-size: 1.4rem;
+      margin: 0 0 0.25rem;
+      text-align: center;
+    }
+    .recipe-desc {
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.5;
+      text-align: center;
+      margin: 0 0 0.9rem;
+    }
+    .recipe-card ul {
+      list-style: none;
+      padding: 0.9rem 0 0;
+      margin: 0;
+      border-top: 1px solid var(--hair);
+    }
+    .recipe-card li {
+      display: flex;
+      gap: 0.75rem;
+      padding: 0.3rem 0;
+      font-size: 0.96rem;
+    }
+    .recipe-card .amt {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      width: 56px;
+      text-align: right;
+      flex: 0 0 auto;
+    }
+    .recipe-card .ing {
+      color: var(--text);
+    }
+    .method {
+      margin: 0.9rem 0 0;
+      color: var(--muted);
+      font-style: italic;
+      font-size: 0.88rem;
+      text-align: center;
+    }
+  </style>
+</Layout>

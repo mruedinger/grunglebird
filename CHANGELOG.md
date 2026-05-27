@@ -5,6 +5,18 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-05-26
+
+### Changed
+- **Site redesign: landing page + nav shell + information architecture.** `/` is now an
+  about-style home instead of the Mike's Beach Bar pledge page. A shared header nav (Cocktails ·
+  Tools · Events, with the admin affordance shown only when signed in) and a site-wide footer
+  wrap every page. Styling is centralized into one stylesheet + one design-token set — the
+  "Campari" dark theme by default, themeable per event via token overrides. New routes:
+  `/cocktails`, `/tools` (spirit-finder stub), and `/events`; the Mike's Beach Bar page (with
+  its pledge form) moved intact to `/events/framily-beach-bar-2026`, and the juice calculator
+  to `/juice`. (#9)
+
 ## 2026-05-24
 
 ### Changed

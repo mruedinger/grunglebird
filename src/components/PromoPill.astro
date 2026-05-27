@@ -1,0 +1,20 @@
+---
+// Reusable B2 promo slot — the accent-tinted "what's on" capsule. Used on the
+// home page and the events index to point at the current event. Renders nothing
+// when no promo is passed, so the slot disappears when there's nothing to promote.
+interface Props {
+  href?: string;
+  label?: string;
+}
+const { href, label } = Astro.props;
+---
+
+{
+  href && label && (
+    <a class="promo" href={href}>
+      <span class="pdot" aria-hidden="true" />
+      {label}
+      <span class="arr" aria-hidden="true">→</span>
+    </a>
+  )
+}
