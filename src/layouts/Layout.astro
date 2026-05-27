@@ -63,12 +63,7 @@ const isAdmin = await getSession(Astro.request, env as AuthEnv);
     <slot />
 
     <footer class="site-footer">
-      <nav>
-        <a href="https://github.com/mruedinger/grunglebird">GitHub</a>
-        <a href="https://github.com/mruedinger/grunglebird/issues/new?template=bug_report.md">Report a bug</a>
-        <a href="https://github.com/mruedinger/grunglebird/issues/new?template=feature_request.md">Request a feature</a>
-        <a href="https://github.com/mruedinger/grunglebird/issues">View issues</a>
-      </nav>
+      <p class="footer-note">A grungle bird is not a real bird.</p>
     </footer>
   </body>
 </html>
