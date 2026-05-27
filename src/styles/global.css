@@ -80,6 +80,10 @@ html {
   color: var(--text);
   background: var(--bg-grad);
   background-attachment: fixed;
+  /* Reserve the scrollbar gutter on every page so short pages (no scrollbar) and
+     long ones (with scrollbar) keep identical content width — otherwise the
+     centered shell shifts horizontally between pages. */
+  scrollbar-gutter: stable;
 }
 
 body {
