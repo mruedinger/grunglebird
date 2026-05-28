@@ -19,12 +19,12 @@
   --text: #f6e7e3;
   --muted: #c39a96;
   --hair: rgba(246, 231, 227, 0.13);
-  --accent: #ff5a6e;
-  --accent-ink: #2a0e15;
-  --accent-hover: #ff7585;
-  --glow: rgba(255, 90, 110, 0.55);
+  --accent: #ff2d2d;
+  --accent-ink: #1f0808;
+  --accent-hover: #ff5c5c;
+  --glow: rgba(255, 45, 45, 0.55);
   --input-bg: #2a131b;
-  --focus: #ff5a6e;
+  --focus: #ff2d2d;
 
   /* — type — */
   --font-display: "Fraunces", Georgia, "Times New Roman", serif;
@@ -272,10 +272,15 @@ label {
   line-height: 0;
 }
 .brand svg {
-  width: 30px;
-  height: 30px;
+  height: 32px;
+  width: auto;
   fill: var(--accent);
   filter: drop-shadow(0 0 9px var(--glow));
+  transition: fill 160ms ease, filter 160ms ease;
+}
+.brand:hover svg {
+  fill: var(--accent-hover);
+  filter: drop-shadow(0 0 12px var(--accent-hover));
 }
 .nav {
   display: flex;
