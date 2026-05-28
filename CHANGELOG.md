@@ -5,6 +5,16 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-05-27
+
+### Changed
+- **Brand mark + favicon: scarlet ibis.** Replaced the placeholder bird in the nav with a
+  real mark — a scarlet ibis silhouette (CC0, derived from a US Fish & Wildlife Service
+  line drawing by Bob Hines) — and added a matching SVG favicon (none existed before).
+  The Campari umbrella accent shifts from pink-red (`#ff5a6e`) to true scarlet (`#ff2d2d`)
+  so the mark reads as the bird it is; the brand now lifts on hover to set up future
+  auth-state treatments. (#10)
+
 ## 2026-05-26
 
 ### Changed
