@@ -1,0 +1,4 @@
+{
+  "//": "Let the Stylelint extension lint Astro <style> blocks live, matching `npm run lint:styles`.",
+  "stylelint.validate": ["css", "astro"]
+}

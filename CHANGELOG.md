@@ -5,6 +5,18 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-05-30
+
+### Added
+- **Styling guardrail.** `npm run lint:styles` now enforces the centralized-styling rule
+  automatically on every PR (a step in the `Required checks` gate): Stylelint forbids
+  hardcoded colors and local re-declaration of shared primitives in `.astro` `<style>`
+  blocks, and a companion scan catches color literals in inline/SVG attributes. The token
+  stylesheet and event poster pages are exempt; the events listing stays enforced. Editor
+  feedback is wired up via `.vscode`, and the mechanism — including how to deliberately
+  override it and a review checklist for what can't be linted — is documented in
+  `docs/styling.md`. (#13)
+
 ## 2026-05-29
 
 ### Added
