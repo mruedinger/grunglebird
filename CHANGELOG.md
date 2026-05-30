@@ -5,6 +5,16 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-05-29
+
+### Added
+- **Continuous integration.** Every PR to `main` now runs `astro check` + `astro build`
+  via GitHub Actions, rolled up into a single required `Required checks` status that
+  branch protection enforces — a failing check or build blocks the merge. This is the
+  safety net between a PR and the auto-deploy to production; direct pushes to `main`
+  stay open for trivial admin edits. Future checks (style lint, tests) slot in without
+  touching branch protection. (#16)
+
 ## 2026-05-27
 
 ### Changed
