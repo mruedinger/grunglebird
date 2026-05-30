@@ -18,6 +18,7 @@ Hosted on Cloudflare Workers; prefer solutions that fit that runtime.
 One stylesheet, one set of design tokens — the single source of truth for color, type, spacing, sizing, headings, buttons, inputs, and every shared primitive. Pages MUST consume these; never redefine shared primitives locally or hardcode their values — a button or heading looks identical on every page. Page-specific layout is fine if built from the shared tokens/scale.
 The shell (nav + footer + layout chrome) is constant everywhere — same structure and typography on every page; only its color retints per event via token overrides.
 Event pages (`/events/<event>`) are the one exception: within the page body they may use bespoke fonts and non-standard elements — a poster for the event. Every other page sticks strictly to the shared system.
+Enforced automatically by `npm run lint:styles` (a CI required check): no hardcoded colors, no re-declaring shared primitives; posters are exempt. See [`docs/styling.md`](docs/styling.md) for what's checked and how to override.
 
 ## Git hygiene
 When opening a PR, by default:

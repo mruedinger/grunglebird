@@ -23,6 +23,8 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 
-# editor
-.vscode/
+# editor — share recommended extensions + project settings, ignore personal files
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
 .idea/

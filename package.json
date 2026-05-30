@@ -9,6 +9,7 @@
     "preview": "astro build && astro preview",
     "deploy": "astro build && wrangler deploy",
     "check": "astro check",
+    "lint:styles": "stylelint \"src/**/*.{astro,css}\" --allow-empty-input && node scripts/lint-inline-colors.mjs",
     "generate-types": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply grunglebird-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply grunglebird-db --remote",
@@ -21,6 +22,8 @@
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.9",
+    "postcss-html": "^1.8.1",
+    "stylelint": "^17.12.0",
     "typescript": "^6.0.3",
     "wrangler": "^4.93.1"
   }
