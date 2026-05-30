@@ -14,6 +14,11 @@ are intentionally left out to keep this readable.
   safety net between a PR and the auto-deploy to production; direct pushes to `main`
   stay open for trivial admin edits. Future checks (style lint, tests) slot in without
   touching branch protection. (#16)
+- **Automated dependency & security maintenance.** Dependabot alerts and security
+  updates are enabled, plus a `dependabot.yml` that opens grouped monthly version-update
+  PRs for npm and GitHub Actions — so the project flags vulnerabilities and resists
+  dependency rot without hands-on attention. Secret scanning with push protection is
+  also on.
 
 ## 2026-05-27
 

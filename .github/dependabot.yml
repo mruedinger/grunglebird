@@ -1,0 +1,30 @@
+version: 2
+
+updates:
+  # App dependencies (package.json / package-lock.json).
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: monthly
+    # Batch routine minor + patch bumps into one PR to keep noise low for a
+    # mostly hands-off repo. Major bumps (e.g. Astro 6 -> 7) fall outside the
+    # group and arrive as their own PRs, so breaking upgrades get a deliberate
+    # review instead of riding along in a batch.
+    groups:
+      minor-and-patch:
+        patterns:
+          - "*"
+        update-types:
+          - minor
+          - patch
+
+  # The CI workflow's own actions (keeps them patched against the
+  # supply-chain risk of pinned-tag actions going stale).
+  - package-ecosystem: github-actions
+    directory: "/"
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
