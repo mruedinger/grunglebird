@@ -59,6 +59,19 @@ To exercise the production build locally on the Workers runtime:
 npm run preview            # astro build + astro preview on workerd
 ```
 
+## Continuous integration
+
+Every pull request targeting `main` runs `astro check` + `astro build` via GitHub
+Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Both roll up into a
+single required status check, **Required checks**, that branch protection requires
+before a PR can merge — a failing check or build blocks the merge. Since `main`
+auto-deploys to production, this is the safety net between a PR and prod.
+
+Direct pushes to `main` stay allowed for trivial edits (admins bypass the check); the
+requirement applies to PR merges only. To add a future check (a style lint, tests),
+add a step to the `ci` job — or a sibling job listed in the gate's `needs` — and
+branch protection needs no change.
+
 ## First-time deploy
 
 1. **Create the D1 database**
