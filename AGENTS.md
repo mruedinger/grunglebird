@@ -20,6 +20,15 @@ The shell (nav + footer + layout chrome) is constant everywhere — same structu
 Event pages (`/events/<event>`) are the one exception: within the page body they may use bespoke fonts and non-standard elements — a poster for the event. Every other page sticks strictly to the shared system.
 Enforced automatically by `npm run lint:styles` (a CI required check): no hardcoded colors, no re-declaring shared primitives; posters are exempt. See [`docs/styling.md`](docs/styling.md) for what's checked and how to override.
 
+## Voice
+grunglebird's personality lives in **microcopy**, not chrome. Actively look for spots — footers, empty states, errors, confirmations, stubs; admin-only corners count too.
+- Register: absurd, a little mysterious, unpretentious dive-bar. Deadpan and understated; the craft is real but never bragged about.
+- Terse wins. Cut any line that over-explains its own joke.
+- The joke is often in what's left unsaid — faint or misdirected praise, not a stated punchline.
+- Don't force it, and don't prescribe tone in issues/specs — frame the function and let the voice set the register at drafting time; float options rather than committing early.
+- Some things stay unexplained — the name's meaning, who "Mike" is. Mysteries, not origin stories.
+- Nothing's canon yet — keep the strongest lines and swap them when something better lands; don't lock in specific phrases.
+
 ## Git hygiene
 When opening a PR, by default:
 - If the change meets the CHANGELOG.md criteria (see its header), add a changelog entry in the same PR.
