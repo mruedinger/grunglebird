@@ -18,24 +18,24 @@ import PromoPill from "../components/PromoPill.astro";
 
   <style>
     .home .feature {
-      margin-top: 3rem;
+      margin-top: var(--space-2xl);
     }
     .feature h2 {
-      font-size: 1.85rem;
-      margin: 0 0 0.5rem;
+      font-size: var(--text-xl);
+      margin: 0 0 var(--space-xs);
     }
     .feature .desc {
       color: var(--muted);
-      max-width: 42ch;
+      max-width: 42ch; /* copy measure — line length has no scale step */
       margin: 0 auto;
       line-height: 1.6;
     }
     .feature-link {
       display: inline-block;
-      margin-top: 1rem;
+      margin-top: var(--space-md);
       color: var(--accent);
       font-weight: 500;
-      font-size: 0.95rem;
+      font-size: var(--text-base);
     }
   </style>
 </Layout>
