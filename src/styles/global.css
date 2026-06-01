@@ -36,6 +36,11 @@
   --focus-rgb: 248, 238, 234; /* warm near-white focus ring (NOT scarlet — scarlet is reserved for errors) */
   --scrim: rgba(8, 4, 6, 0.66); /* modal backdrop */
 
+  /* neon glows — themeable so a light theme (e.g. beach) can switch them off */
+  --glow-btn: 0 0 8px rgba(var(--accent-rgb), 0.7), 0 0 30px rgba(var(--accent-rgb), 0.55);
+  --glow-btn-sm: 0 0 8px rgba(var(--accent-rgb), 0.35);
+  --glow-pill: 0 0 12px rgba(var(--accent-rgb), 0.5), inset 0 0 8px rgba(var(--accent-rgb), 0.22);
+
   /* — type families — */
   --font-display: "Bricolage Grotesque", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
@@ -94,6 +99,11 @@
   --glow: rgba(var(--accent-rgb), 0.4);
   --focus-rgb: 0, 180, 204; /* ocean */
   --scrim: rgba(38, 32, 26, 0.55);
+
+  /* light theme: no neon glows on buttons / pills */
+  --glow-btn: none;
+  --glow-btn-sm: none;
+  --glow-pill: none;
 
   /* beach-family palette (event body) */
   --sand: #fff8eb;
@@ -279,7 +289,7 @@ button,
   background: var(--accent);
   color: var(--accent-ink);
   text-decoration: none;
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.7), 0 0 30px rgba(var(--accent-rgb), 0.55);
+  box-shadow: var(--glow-btn);
   transition: background 140ms ease;
 }
 button:hover,
@@ -309,7 +319,7 @@ button.sm,
 .button.sm {
   padding: 0.34rem 0.65rem;
   font-size: 0.8rem;
-  box-shadow: 0 0 8px rgba(var(--accent-rgb), 0.35);
+  box-shadow: var(--glow-btn-sm);
 }
 button.ghost.sm,
 .button.ghost.sm {
@@ -386,7 +396,7 @@ button.radiate:hover::after,
   border-radius: var(--radius-pill);
   padding: var(--space-2xs) var(--space-sm);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5), inset 0 0 8px rgba(var(--accent-rgb), 0.22);
+  box-shadow: var(--glow-pill);
   text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.85);
 }
 
@@ -734,7 +744,7 @@ table.table {
   border: 1px solid var(--accent);
   color: color-mix(in srgb, var(--accent) 35%, var(--text));
   /* neon ring to match the badge — reads like a time-limited CTA */
-  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5), inset 0 0 8px rgba(var(--accent-rgb), 0.22);
+  box-shadow: var(--glow-pill);
   --ring: var(--accent-rgb);
   --ring-a: 0.55;
 }
