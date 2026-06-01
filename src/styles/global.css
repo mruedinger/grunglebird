@@ -22,7 +22,8 @@
   --bg: #140a0e;
   --bg-grad: radial-gradient(900px 520px at 50% -8%, #2a1019 0%, #140a0e 55%, #0a0506 100%);
   --surface: #1f1018;
-  --input-bg: #190d12; /* a touch darker than --surface, so fields read as "wells" */
+  --input-bg: #0f070a; /* deep well — reads recessed both in a card and on the page bg */
+  --control-border: rgba(244, 233, 229, 0.2); /* resting edge for inputs/controls; distinct from the decorative --hair */
   --text: #f4e9e5;
   --muted: #a98a86;
   --hair: rgba(244, 233, 229, 0.1);
@@ -90,6 +91,7 @@
   --text: #26201a;
   --muted: #6a584a;
   --hair: #e8cea0;
+  --control-border: color-mix(in srgb, var(--ink) 38%, transparent); /* readable field edge on the light theme */
 
   --accent: #ff5252;
   --accent-rgb: 255, 82, 82;
@@ -116,6 +118,17 @@
   --sunset: #ff5252;
   --ink: #26201a;
   --ink-soft: #6a584a;
+}
+
+/* Opt-in accessibility: users who ask their OS for more contrast get a stronger
+   control edge, without changing the dim default for everyone else. */
+@media (prefers-contrast: more) {
+  :root {
+    --control-border: rgba(244, 233, 229, 0.4);
+  }
+  [data-theme="beach"] {
+    --control-border: color-mix(in srgb, var(--ink) 70%, transparent);
+  }
 }
 
 /* ─── reset / base ─── */
@@ -411,7 +424,7 @@ select {
   padding: 0.6rem 0.8rem;
   color: var(--text);
   background: var(--input-bg);
-  border: 1px solid var(--hair);
+  border: 1px solid var(--control-border);
   border-radius: var(--radius-sm);
   transition: border-color 120ms ease, box-shadow 120ms ease;
 }

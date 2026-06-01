@@ -76,16 +76,19 @@ import PromoPill from "../components/PromoPill.astro";
         Default <code>:root</code> values; a <code>[data-theme]</code> reassigns the
         same names to retint. <code>--accent-rgb 255,54,43</code> and
         <code>--focus-rgb 248,238,234</code> are rgb triplets that drive glows,
-        radiate rings, and the focus ring.
+        radiate rings, and the focus ring. <code>--control-border</code> is the
+        resting input edge (kept dim by default, bumped under
+        <code>prefers-contrast: more</code>); <code>--hair</code> stays faint for dividers.
       </p>
       <div class="sg-swatches">
         <div><div class="sw sw-bg"></div><div class="sg-swatch-meta"><span>--bg</span><span class="sg-hex">#140a0e</span></div></div>
         <div><div class="sw sw-bg-grad"></div><div class="sg-swatch-meta"><span>--bg-grad</span><span class="sg-hex">radial</span></div></div>
         <div><div class="sw sw-surface"></div><div class="sg-swatch-meta"><span>--surface</span><span class="sg-hex">#1f1018</span></div></div>
-        <div><div class="sw sw-input-bg"></div><div class="sg-swatch-meta"><span>--input-bg</span><span class="sg-hex">#190d12</span></div></div>
+        <div><div class="sw sw-input-bg"></div><div class="sg-swatch-meta"><span>--input-bg</span><span class="sg-hex">#0f070a</span></div></div>
         <div><div class="sw sw-text"></div><div class="sg-swatch-meta"><span>--text</span><span class="sg-hex">#f4e9e5</span></div></div>
         <div><div class="sw sw-muted"></div><div class="sg-swatch-meta"><span>--muted</span><span class="sg-hex">#a98a86</span></div></div>
         <div><div class="sw sw-hair"></div><div class="sg-swatch-meta"><span>--hair</span><span class="sg-hex">10% white</span></div></div>
+        <div><div class="sw sw-control-border"></div><div class="sg-swatch-meta"><span>--control-border</span><span class="sg-hex">20% → 40%</span></div></div>
         <div><div class="sw sw-accent"></div><div class="sg-swatch-meta"><span>--accent</span><span class="sg-hex">#ff362b</span></div></div>
         <div><div class="sw sw-accent-hover"></div><div class="sg-swatch-meta"><span>--accent-hover</span><span class="sg-hex">#ff5042</span></div></div>
         <div><div class="sw sw-accent-ink"></div><div class="sg-swatch-meta"><span>--accent-ink</span><span class="sg-hex">#1a0606</span></div></div>
@@ -413,6 +416,7 @@ import PromoPill from "../components/PromoPill.astro";
     .sw-text { background: var(--text); }
     .sw-muted { background: var(--muted); }
     .sw-hair { background: var(--hair); }
+    .sw-control-border { background: var(--control-border); }
     .sw-accent { background: var(--accent); }
     .sw-accent-hover { background: var(--accent-hover); }
     .sw-accent-ink { background: var(--accent-ink); }

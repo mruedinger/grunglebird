@@ -21,6 +21,11 @@ are intentionally left out to keep this readable.
   umbrella, and the display font from Fraunces to Bricolage Grotesque. Because every page
   consumes the shared tokens, the whole site retints and retypes at once; per-event
   theming (`[data-theme]`, e.g. beach) still works. (#36)
+- **More legible input fields.** Inputs now use a dedicated `--control-border` token
+  (distinct from the decorative `--hair` hairline) over a deeper well, so a field reads as
+  a defined control whether it sits on the page or in a card. It stays dim by default and
+  bumps to a higher-contrast edge under `prefers-contrast: more` — an opt-in accessibility
+  boost that leaves the default look untouched. (follow-up to #36)
 
 ## 2026-05-30
 
