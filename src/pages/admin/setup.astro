@@ -68,9 +68,10 @@ if (!allowed) Astro.response.status = 404;
     </script>
 
     <style>
-      .setup { max-width: 32rem; }
-      .setup button { padding: 0.5rem 1rem; }
-      .setup-msg { min-height: 1.2em; margin-top: 1rem; }
+      .setup { max-width: var(--container-narrow); }
+      .setup-msg { min-height: 1.2em; margin-top: var(--space-md); }
+      /* inline code: the small radius/padding have no scale step (no inline-code
+         primitive in the system yet — that's #36 territory). Deliberate one-off. */
       code { background: color-mix(in srgb, var(--text) 10%, transparent); padding: 0.1rem 0.3rem; border-radius: 4px; }
     </style>
   </Layout>
