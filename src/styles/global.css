@@ -67,9 +67,9 @@
   --measure: 65ch; /* copy line-length */
 
   /* — radii — */
-  --radius-sm: 8px; /* buttons / inputs */
-  --radius: 12px; /* cards / table / callout */
-  --radius-lg: 14px; /* modal */
+  --radius-sm: 12px; /* buttons / inputs */
+  --radius: 16px; /* cards / table / callout */
+  --radius-lg: 18px; /* modal */
   --radius-pill: 999px;
 }
 
@@ -722,6 +722,7 @@ table.table {
 
 /* ─── promo pill (B2): reusable "what's on" slot, used on / and /events ─── */
 .promo {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -729,13 +730,34 @@ table.table {
   font-size: 0.9rem;
   padding: 7px 16px;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--accent);
   color: color-mix(in srgb, var(--accent) 35%, var(--text));
+  /* neon ring to match the badge — reads like a time-limited CTA */
+  box-shadow: 0 0 12px rgba(var(--accent-rgb), 0.5), inset 0 0 8px rgba(var(--accent-rgb), 0.22);
+  --ring: var(--accent-rgb);
+  --ring-a: 0.55;
 }
 .promo:hover {
   text-decoration: none;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+/* radiate on hover, same as buttons */
+.promo::before,
+.promo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+}
+.promo:hover::before {
+  animation: radiate 6s ease-out infinite;
+}
+.promo:hover::after {
+  animation: radiate 6s ease-out infinite 3s;
 }
 .promo .pdot {
   width: 7px;
@@ -758,7 +780,9 @@ table.table {
   button.radiate:hover::before,
   button.radiate:hover::after,
   .button.radiate:hover::before,
-  .button.radiate:hover::after {
+  .button.radiate:hover::after,
+  .promo:hover::before,
+  .promo:hover::after {
     animation: none;
   }
 }
