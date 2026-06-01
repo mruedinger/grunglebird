@@ -14,8 +14,8 @@ const authed = await getSession(Astro.request, env as AuthEnv);
         <p class="muted">
           Total: <strong id="total">…</strong>
         </p>
-        <div class="table-wrap">
-          <table id="pledges">
+        <div class="table-frame">
+          <table id="pledges" class="table">
             <thead>
               <tr>
                 <th>Date</th>
@@ -232,42 +232,20 @@ const authed = await getSession(Astro.request, env as AuthEnv);
   </script>
 
   <style>
-    .table-wrap { overflow-x: auto; }
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      background: var(--surface);
-      border: 1px solid var(--hair);
-      border-radius: 8px;
-      overflow: hidden;
-      font-size: 0.9rem;
-    }
-    th, td {
-      padding: 0.5rem 0.75rem;
-      text-align: left;
-      border-bottom: 1px solid var(--hair);
-      vertical-align: middle;
-    }
-    th {
-      background: color-mix(in srgb, var(--text) 6%, transparent);
-      font-family: var(--font-display);
-    }
-    td.amt { font-weight: 600; }
-    tr.paid td { opacity: 0.55; text-decoration: line-through; }
-    /* Delete uses the shared .danger.sm button variant; .del is just the JS hook.
-       "Add a passkey" / "Log out" use the shared .ghost.sm variant. */
+    /* The pledges table uses the shared .table-frame + .table primitives; the JS builds
+       td.amt / tr.paid / button.del.danger.sm, all styled by the shared rules. The
+       sign-in / setup buttons and the recovery input use the shared button/input as-is. */
     .admin-actions {
       display: flex;
-      gap: 0.75rem;
+      gap: var(--space-sm);
       justify-content: center;
       flex-wrap: wrap;
-      margin-top: 1.5rem;
+      margin-top: var(--space-lg);
     }
-    .signin { max-width: 24rem; margin: 0 auto; }
-    .signin button { padding: 0.5rem 1rem; }
+    .signin { max-width: var(--container-narrow); margin: 0 auto; }
     .signin-msg { min-height: 1.2em; }
-    .recovery { margin-top: 1.5rem; }
-    .recovery form { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-    .recovery input { flex: 1; padding: 0.4rem; }
+    .recovery { margin-top: var(--space-lg); }
+    .recovery form { display: flex; gap: var(--space-xs); margin-top: var(--space-xs); }
+    .recovery input { flex: 1; }
   </style>
 </Layout>
