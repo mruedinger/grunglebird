@@ -19,15 +19,15 @@ import Layout from "../layouts/Layout.astro";
 
   <style>
     .soon {
-      margin-top: 2rem;
+      margin-top: var(--space-xl);
     }
     .soon h2 {
-      font-size: 1.85rem;
-      margin: 0.9rem 0 0.4rem;
+      font-size: var(--text-xl);
+      margin: var(--space-sm) 0 var(--space-2xs);
     }
     .soon p {
       color: var(--muted);
-      max-width: 40ch;
+      max-width: 40ch; /* copy measure — line length has no scale step */
       margin: 0 auto;
       line-height: 1.55;
     }
