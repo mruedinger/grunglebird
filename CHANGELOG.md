@@ -5,6 +5,23 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-01
+
+### Added
+- **Design system + living styleguide.** `src/styles/global.css` is now the complete
+  visual registry — named type, spacing, sizing, and radius scales plus the full catalog
+  of shared primitives (neon hero, headings, subhead, body copy, buttons, inputs, card,
+  badge, promo, table, modal, alert) built from those tokens. A new public-but-unlinked
+  `/styleguide` renders every token and primitive on one page as the review/acceptance
+  surface. Appearance only — no page migration or new lint enforcement yet (epic #34
+  items 2/3). (#36)
+
+### Changed
+- **New look: "Dive Bar."** The default palette moves to a dark-scarlet "dive bar"
+  umbrella, and the display font from Fraunces to Bricolage Grotesque. Because every page
+  consumes the shared tokens, the whole site retints and retypes at once; per-event
+  theming (`[data-theme]`, e.g. beach) still works. (#36)
+
 ## 2026-05-30
 
 ### Added

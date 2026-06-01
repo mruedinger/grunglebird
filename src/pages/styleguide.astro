@@ -1,0 +1,445 @@
+---
+import Layout from "../layouts/Layout.astro";
+import PromoPill from "../components/PromoPill.astro";
+
+// The living registry for issue #36: every design token and shared primitive
+// rendered on one page. Public but intentionally NOT linked from the nav — it's a
+// review/acceptance surface, not a destination. Everything here CONSUMES the shared
+// system (src/styles/global.css); the page's own <style> is layout-only.
+---
+
+<Layout title="grunglebird — styleguide" description="Design tokens and shared primitives.">
+  <main class="sg-wrap">
+    <h1 class="hero">Styleguide</h1>
+    <p class="subhead">Every token and shared primitive, from one source of truth.</p>
+    <div class="copy">
+      <p class="muted">
+        This page is the registry: the type / spacing / sizing / radius scales and
+        every shared primitive, rendered live from <code>global.css</code>. If a
+        thing looks right here, it looks right everywhere it's used.
+      </p>
+    </div>
+
+    <!-- ============ TOKENS ============ -->
+    <section class="sg-section">
+      <p class="sg-label">Type scale — Restrained</p>
+      <p class="sg-note">
+        Bricolage Grotesque for display; Inter for body. The hero is weight 700,
+        other headings 600. <code>--text-2xl</code> / <code>--text-3xl</code> are
+        reserved for posters/marquees and unused by standard pages.
+      </p>
+      <div>
+        <div class="sg-specimen"><span class="sg-tok">--text-3xl · 3</span><span class="t-3xl t-display">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-2xl · 2.5</span><span class="t-2xl t-display">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-xl · 1.875</span><span class="t-xl t-display">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-lg · 1.375</span><span class="t-lg t-display">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-md · 1.125</span><span class="t-md">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-base · 1</span><span class="t-base">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-sm · 0.875</span><span class="t-sm">Grungle Bird</span></div>
+        <div class="sg-specimen"><span class="sg-tok">--text-xs · 0.75</span><span class="t-xs">Grungle Bird</span></div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Spacing — 4px rhythm</p>
+      <p class="sg-note">The shared rhythm for gaps, padding, and margins.</p>
+      <div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-2xs · 4</span><span class="bar bar-2xs"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-xs · 8</span><span class="bar bar-xs"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-sm · 12</span><span class="bar bar-sm"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-md · 16</span><span class="bar bar-md"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-lg · 24</span><span class="bar bar-lg"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-xl · 32</span><span class="bar bar-xl"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-2xl · 48</span><span class="bar bar-2xl"></span></div>
+        <div class="sg-spacing-row"><span class="sg-tok">--space-3xl · 64</span><span class="bar bar-3xl"></span></div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Radii &amp; sizing</p>
+      <p class="sg-note">
+        Widths: <code>--shell-max 1100</code>, <code>--container 720</code>,
+        <code>--container-narrow 32rem</code>, <code>--measure 65ch</code> (this copy
+        column).
+      </p>
+      <div class="sg-row">
+        <div class="radius-box r-sm">--radius-sm 12</div>
+        <div class="radius-box r-md">--radius 16</div>
+        <div class="radius-box r-lg">--radius-lg 18</div>
+        <div class="radius-box r-pill">--radius-pill</div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Palette — Dive Bar</p>
+      <p class="sg-note">
+        Default <code>:root</code> values; a <code>[data-theme]</code> reassigns the
+        same names to retint. <code>--accent-rgb 255,54,43</code> and
+        <code>--focus-rgb 248,238,234</code> are rgb triplets that drive glows,
+        radiate rings, and the focus ring.
+      </p>
+      <div class="sg-swatches">
+        <div><div class="sw sw-bg"></div><div class="sg-swatch-meta"><span>--bg</span><span class="sg-hex">#140a0e</span></div></div>
+        <div><div class="sw sw-bg-grad"></div><div class="sg-swatch-meta"><span>--bg-grad</span><span class="sg-hex">radial</span></div></div>
+        <div><div class="sw sw-surface"></div><div class="sg-swatch-meta"><span>--surface</span><span class="sg-hex">#1f1018</span></div></div>
+        <div><div class="sw sw-input-bg"></div><div class="sg-swatch-meta"><span>--input-bg</span><span class="sg-hex">#190d12</span></div></div>
+        <div><div class="sw sw-text"></div><div class="sg-swatch-meta"><span>--text</span><span class="sg-hex">#f4e9e5</span></div></div>
+        <div><div class="sw sw-muted"></div><div class="sg-swatch-meta"><span>--muted</span><span class="sg-hex">#a98a86</span></div></div>
+        <div><div class="sw sw-hair"></div><div class="sg-swatch-meta"><span>--hair</span><span class="sg-hex">10% white</span></div></div>
+        <div><div class="sw sw-accent"></div><div class="sg-swatch-meta"><span>--accent</span><span class="sg-hex">#ff362b</span></div></div>
+        <div><div class="sw sw-accent-hover"></div><div class="sg-swatch-meta"><span>--accent-hover</span><span class="sg-hex">#ff5042</span></div></div>
+        <div><div class="sw sw-accent-ink"></div><div class="sg-swatch-meta"><span>--accent-ink</span><span class="sg-hex">#1a0606</span></div></div>
+        <div><div class="sw sw-accent-text"></div><div class="sg-swatch-meta"><span>--accent-text</span><span class="sg-hex">#ff6a60</span></div></div>
+        <div><div class="sw sw-glow"></div><div class="sg-swatch-meta"><span>--glow</span><span class="sg-hex">accent 55%</span></div></div>
+        <div><div class="sw sw-scrim"></div><div class="sg-swatch-meta"><span>--scrim</span><span class="sg-hex">modal</span></div></div>
+      </div>
+    </section>
+
+    <!-- ============ PRIMITIVES ============ -->
+    <section class="sg-section">
+      <p class="sg-label">Headings, subhead &amp; copy</p>
+      <div class="sg-stack">
+        <h1>Heading 1</h1>
+        <h2>Heading 2 — section</h2>
+        <h3>Heading 3 — subsection / card title</h3>
+        <h2 class="page-title">Page title — the standard page heading utility</h2>
+        <p class="subhead">Subhead / tagline — Bricolage 500, muted.</p>
+        <div class="copy">
+          <p>
+            Body copy sits in a <code>.copy</code> block, held to
+            <code>--measure</code> for a comfortable line length. Inter, generous
+            leading. This is the default reading column for prose.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Hero — neon</p>
+      <p class="sg-note">
+        The lit-tube wordmark: flickers to life on load and ~once a minute (held lit
+        under reduced-motion).
+      </p>
+      <h1 class="hero">Grunglebird</h1>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Buttons</p>
+      <p class="sg-note">Hover a button to see its radiate rings (motion is CSS-only, reduced-motion safe).</p>
+      <div class="sg-row">
+        <button>Primary</button>
+        <button class="ghost">Ghost</button>
+        <button class="danger">Delete</button>
+        <button disabled>Disabled</button>
+        <button class="sm">Small</button>
+        <button class="ghost sm">Small ghost</button>
+      </div>
+      <div class="sg-row" style="margin-top: var(--space-md)">
+        <button class="radiate">Primary · radiate</button>
+        <button class="ghost radiate">Ghost · radiate</button>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Badge</p>
+      <div class="sg-row">
+        <span class="badge">Coming soon</span>
+        <span class="badge">New</span>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Promo capsule</p>
+      <p class="sg-note">The accent-tinted "what's on" slot (the <code>PromoPill</code> component) — points at the current event on the home and events pages.</p>
+      <div class="sg-row">
+        <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar — pledge the bar" />
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Cards</p>
+      <div class="sg-grid">
+        <div class="card">
+          <h3>Card title</h3>
+          <p class="muted">Surface, hairline border, <code>--radius</code> corners. The shared container for grouped content.</p>
+        </div>
+        <div class="card">
+          <h3>Another card</h3>
+          <p class="muted">Pages compose <code>.card</code> from markup and add their own layout class — never restyle it.</p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Inputs &amp; states</p>
+      <p class="sg-note">
+        Fields read as "wells" (a touch darker than the card). Focus is a warm
+        near-white ring — click a field to see it; scarlet is reserved for errors.
+      </p>
+      <div class="sg-grid">
+        <div class="field">
+          <label for="sg-name">Cocktail name</label>
+          <input id="sg-name" type="text" placeholder="Grungle Bird" />
+          <p class="help">What it's called on the menu.</p>
+        </div>
+        <div class="field error">
+          <label class="label" for="sg-name-err">Cocktail name</label>
+          <input id="sg-name-err" type="text" value="" class="error" aria-invalid="true" aria-describedby="sg-name-err-help" />
+          <p class="help" id="sg-name-err-help">! Needs a name before you can save.</p>
+        </div>
+        <div class="field">
+          <label for="sg-locked">Locked recipe</label>
+          <input id="sg-locked" type="text" value="Not editable right now" disabled />
+        </div>
+        <div class="field">
+          <label for="sg-amount">Amount (oz)</label>
+          <input id="sg-amount" type="number" value="1.5" step="0.25" />
+        </div>
+        <div class="field">
+          <label for="sg-style">Style</label>
+          <div class="select-wrap">
+            <select id="sg-style">
+              <option>Tiki</option><option>Sour</option><option>Stirred</option><option>Highball</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="sg-method">Method</label>
+          <textarea id="sg-method" placeholder="Pebble ice. Shake. Open pour."></textarea>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Search</p>
+      <p class="sg-note">Leading-magnifier for filter-as-you-type; input + button for a fired query.</p>
+      <div class="sg-grid">
+        <div class="search-ic">
+          <span class="mag">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg>
+          </span>
+          <input type="search" placeholder="Search recipes…" aria-label="Search recipes" />
+        </div>
+        <div class="search-btn">
+          <input type="text" placeholder="Smith &amp; Cross…" aria-label="Spirit to find" />
+          <button class="radiate">Find</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Table</p>
+      <div class="table-frame">
+        <table class="table">
+          <thead>
+            <tr><th>Date</th><th>Name</th><th>Amount</th><th></th></tr>
+          </thead>
+          <tbody>
+            <tr><td>May 24</td><td>Avery</td><td class="amt">$24.00</td><td><button class="danger sm">Delete</button></td></tr>
+            <tr class="paid"><td>May 22</td><td>Jordan</td><td class="amt">$40.00</td><td><button class="danger sm">Delete</button></td></tr>
+            <tr><td>May 20</td><td>Sam</td><td class="amt">$12.00</td><td><button class="danger sm">Delete</button></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Modal</p>
+      <p class="sg-note">Appearance only — open/close behavior lands with a feature that needs it.</p>
+      <div class="sg-modal-stage">
+        <div class="modal-scrim sg-modal-scrim">
+          <div class="modal">
+            <div class="modal-head">
+              <h3 class="modal-title">Delete this pledge?</h3>
+              <button class="modal-close" aria-label="Close">✕</button>
+            </div>
+            <p class="modal-body">This can't be undone. The pledge will be removed from the event tally.</p>
+            <div class="modal-actions">
+              <button class="ghost">Cancel</button>
+              <button class="danger">Delete</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Alert / callout</p>
+      <div class="sg-stack">
+        <div class="alert">
+          <span class="alert-icon">i</span>
+          <div>
+            <p class="alert-title">Heads up</p>
+            <p class="alert-body">Neutral info — the default callout for context or tips.</p>
+          </div>
+        </div>
+        <div class="alert alert-danger">
+          <span class="alert-icon">!</span>
+          <div>
+            <p class="alert-title">Something went wrong</p>
+            <p class="alert-body">The scarlet variant — reserved for errors and things that need attention.</p>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <style>
+    /* Layout only — every color/shape here references a shared token. This page
+       consumes the primitives in global.css; it never re-declares them. */
+    .sg-wrap {
+      max-width: var(--shell-max);
+      margin: 0 auto;
+      padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
+    }
+    .sg-section {
+      margin-top: var(--space-3xl);
+    }
+    .sg-label {
+      font-size: var(--text-xs);
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin: 0 0 var(--space-xs);
+    }
+    .sg-note {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      max-width: var(--measure);
+      margin: 0 0 var(--space-lg);
+    }
+    .sg-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-md);
+      align-items: center;
+    }
+    .sg-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: var(--space-lg);
+      align-items: start;
+    }
+    .sg-stack > * + * {
+      margin-top: var(--space-md);
+    }
+    .sg-specimen {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: var(--space-md);
+      align-items: baseline;
+      padding: var(--space-xs) 0;
+      border-bottom: 1px solid var(--hair);
+    }
+    .sg-spacing-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: var(--space-md);
+      align-items: center;
+      padding: var(--space-2xs) 0;
+    }
+    .sg-tok {
+      font-family: var(--font-body);
+      font-size: var(--text-sm);
+      color: var(--muted);
+    }
+    code {
+      font-size: 0.92em;
+      color: var(--accent-text);
+    }
+
+    /* type specimens */
+    .t-display { font-family: var(--font-display); font-weight: 600; }
+    .t-xs { font-size: var(--text-xs); }
+    .t-sm { font-size: var(--text-sm); }
+    .t-base { font-size: var(--text-base); }
+    .t-md { font-size: var(--text-md); }
+    .t-lg { font-size: var(--text-lg); }
+    .t-xl { font-size: var(--text-xl); }
+    .t-2xl { font-size: var(--text-2xl); }
+    .t-3xl { font-size: var(--text-3xl); }
+
+    /* spacing bars */
+    .bar { height: 14px; border-radius: var(--radius-pill); background: var(--accent); }
+    .bar-2xs { width: var(--space-2xs); }
+    .bar-xs { width: var(--space-xs); }
+    .bar-sm { width: var(--space-sm); }
+    .bar-md { width: var(--space-md); }
+    .bar-lg { width: var(--space-lg); }
+    .bar-xl { width: var(--space-xl); }
+    .bar-2xl { width: var(--space-2xl); }
+    .bar-3xl { width: var(--space-3xl); }
+
+    /* radii demo */
+    .radius-box {
+      width: 92px;
+      height: 56px;
+      display: grid;
+      place-items: center;
+      text-align: center;
+      font-size: var(--text-xs);
+      color: var(--muted);
+      background: var(--surface);
+      border: 1px solid var(--hair);
+    }
+    .r-sm { border-radius: var(--radius-sm); }
+    .r-md { border-radius: var(--radius); }
+    .r-lg { border-radius: var(--radius-lg); }
+    .r-pill { border-radius: var(--radius-pill); }
+
+    /* palette swatches */
+    .sg-swatches {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: var(--space-md);
+    }
+    .sw {
+      height: 52px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--hair);
+    }
+    .sg-swatch-meta {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-xs);
+      margin-top: var(--space-2xs);
+      font-size: var(--text-xs);
+    }
+    .sg-hex { color: var(--muted); }
+    .sw-bg { background: var(--bg); }
+    .sw-bg-grad { background: var(--bg-grad); }
+    .sw-surface { background: var(--surface); }
+    .sw-input-bg { background: var(--input-bg); }
+    .sw-text { background: var(--text); }
+    .sw-muted { background: var(--muted); }
+    .sw-hair { background: var(--hair); }
+    .sw-accent { background: var(--accent); }
+    .sw-accent-hover { background: var(--accent-hover); }
+    .sw-accent-ink { background: var(--accent-ink); }
+    .sw-accent-text { background: var(--accent-text); }
+    .sw-glow { background: var(--glow); }
+    .sw-scrim { background: var(--scrim); }
+
+    /* modal stage — renders the real .modal-scrim + .modal primitives, but bounds
+       the scrim (normally a fixed full-viewport overlay) to this demo box. Only its
+       placement is re-anchored; its scrim fill, blur, and centering come from the
+       primitive. */
+    .sg-modal-stage {
+      position: relative;
+      min-height: 260px;
+      border: 1px solid var(--hair);
+      border-radius: var(--radius);
+      overflow: hidden;
+    }
+    .sg-modal-stage .sg-modal-scrim {
+      position: absolute;
+    }
+
+    @media (max-width: 560px) {
+      .sg-specimen,
+      .sg-spacing-row {
+        grid-template-columns: 110px 1fr;
+      }
+    }
+  </style>
+</Layout>

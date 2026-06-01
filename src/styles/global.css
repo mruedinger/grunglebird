@@ -1,60 +1,109 @@
 /*
  * grunglebird — single source of truth for design tokens + shared primitives.
  * Imported once, by src/layouts/Layout.astro. Pages consume these; they never
- * redefine shared primitives or hardcode token values locally.
+ * redefine shared primitives or hardcode token values locally. Rendered in full
+ * on /styleguide — the reviewable registry for every token and primitive.
  *
- * Theming: the Campari dark umbrella is the default token set on :root. A theme
- * is just a reassignment of these same token *values* under [data-theme="…"];
- * the shell structure and typography stay identical, only color retints. The
- * Layout sets data-theme on <html>, so the whole shell + page body retint together.
- * Event-page bodies are the one sanctioned exception (bespoke fonts/elements),
- * scoped within the page itself.
+ * Theming: the "Dive Bar" dark-scarlet umbrella is the default token set on :root.
+ * A theme is just a reassignment of these same token *values* under
+ * [data-theme="…"]; the shell structure and typography stay identical, only color
+ * retints. The Layout sets data-theme on <html>, so the whole shell + page body
+ * retint together. Event-page bodies are the one sanctioned exception (bespoke
+ * fonts/elements), scoped within the page itself.
+ *
+ * Colors are tokens — including the reused/theme-bearing rgb triplets that drive
+ * glows, focus rings, and the scarlet "alert text" (--accent-rgb / --focus-rgb /
+ * --accent-text). Effect literals that are genuinely single-purpose (the neon
+ * hero's pink highlight, the near-black modal scrim/shadow) stay inline here.
  */
 
 :root {
-  /* — Campari dark umbrella (default) — */
-  --bg: #25121a;
-  --bg-grad: radial-gradient(1200px 620px at 50% -22%, #3a1622 0%, #25121a 55%, #1c0d14 100%);
-  --surface: #321720;
-  --text: #f6e7e3;
-  --muted: #c39a96;
-  --hair: rgba(246, 231, 227, 0.13);
-  --accent: #ff2d2d;
-  --accent-ink: #1f0808;
-  --accent-hover: #ff5c5c;
-  --glow: rgba(255, 45, 45, 0.55);
-  --input-bg: #2a131b;
-  --focus: #ff2d2d;
+  /* — Dive Bar umbrella (default) — */
+  --bg: #140a0e;
+  --bg-grad: radial-gradient(900px 520px at 50% -8%, #2a1019 0%, #140a0e 55%, #0a0506 100%);
+  --surface: #1f1018;
+  --input-bg: #190d12; /* a touch darker than --surface, so fields read as "wells" */
+  --text: #f4e9e5;
+  --muted: #a98a86;
+  --hair: rgba(244, 233, 229, 0.1);
 
-  /* — type — */
-  --font-display: "Fraunces", Georgia, "Times New Roman", serif;
+  --accent: #ff362b; /* scarlet ibis */
+  --accent-rgb: 255, 54, 43; /* = --accent; drives glows / rings / radiate, retints per theme */
+  --accent-hover: #ff5042; /* button hover fill */
+  --accent-ink: #1a0606; /* text on the accent fill */
+  --accent-text: #ff6a60; /* bright scarlet text: badge, input error, alert title */
+  --glow: rgba(var(--accent-rgb), 0.55); /* brand mark drop-shadow */
+  --focus-rgb: 248, 238, 234; /* warm near-white focus ring (NOT scarlet — scarlet is reserved for errors) */
+  --scrim: rgba(8, 4, 6, 0.66); /* modal backdrop */
+
+  /* neon glows — themeable so a light theme (e.g. beach) can switch them off */
+  --glow-btn: 0 0 8px rgba(var(--accent-rgb), 0.7), 0 0 30px rgba(var(--accent-rgb), 0.55);
+  --glow-btn-sm: 0 0 8px rgba(var(--accent-rgb), 0.35);
+  --glow-pill: 0 0 12px rgba(var(--accent-rgb), 0.5), inset 0 0 8px rgba(var(--accent-rgb), 0.22);
+
+  /* — type families — */
+  --font-display: "Bricolage Grotesque", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
 
-  /* — scale / shape — */
-  --space: 1rem;
+  /* — type scale: "Restrained" (~1.18) — */
+  --text-xs: 0.75rem; /* caption / badge */
+  --text-sm: 0.875rem; /* small / meta / table */
+  --text-base: 1rem; /* body */
+  --text-md: 1.125rem; /* h3 / subhead / card title */
+  --text-lg: 1.375rem; /* h2 */
+  --text-xl: 1.875rem; /* h1 / hero */
+  --text-2xl: 2.5rem; /* reserved: poster / marquee */
+  --text-3xl: 3rem; /* reserved: poster / marquee */
+
+  /* — spacing: 4px rhythm — */
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
+  --space-md: 16px;
+  --space-lg: 24px;
+  --space-xl: 32px;
+  --space-2xl: 48px;
+  --space-3xl: 64px;
+
+  /* — sizing — */
   --shell-max: 1100px; /* shell (header/footer) content width */
-  --container: 720px;
-  --radius: 12px;
-  --radius-sm: 8px;
+  --container: 720px; /* standard page column */
+  --container-narrow: 32rem; /* admin / setup forms */
+  --measure: 65ch; /* copy line-length */
+
+  /* — radii — */
+  --radius-sm: 12px; /* buttons / inputs */
+  --radius: 16px; /* cards / table / callout */
+  --radius-lg: 18px; /* modal */
   --radius-pill: 999px;
 }
 
 /* — Beach: Mike's Beach Bar event theme. Reassigns the shared tokens to the
    sand/ocean/sunset palette, and exposes the beach-family names the event body
-   uses for its poster styling. Same token names ⇒ the shell retints to match. */
+   uses for its poster styling. Same token names ⇒ the shell + the poster's shared
+   primitives (buttons/inputs/cards) retint to match. */
 [data-theme="beach"] {
   --bg: #fff8eb;
   --bg-grad: #fff8eb;
   --surface: #fffcf3;
+  --input-bg: #ffffff;
   --text: #26201a;
   --muted: #6a584a;
   --hair: #e8cea0;
+
   --accent: #ff5252;
-  --accent-ink: #ffffff;
+  --accent-rgb: 255, 82, 82;
   --accent-hover: #ffa726;
-  --glow: rgba(255, 82, 82, 0.4);
-  --input-bg: #ffffff;
-  --focus: #00b4cc;
+  --accent-ink: #ffffff;
+  --accent-text: #c62828; /* readable scarlet on the light theme */
+  --glow: rgba(var(--accent-rgb), 0.4);
+  --focus-rgb: 0, 180, 204; /* ocean */
+  --scrim: rgba(38, 32, 26, 0.55);
+
+  /* light theme: no neon glows on buttons / pills */
+  --glow-btn: none;
+  --glow-btn-sm: none;
+  --glow-pill: none;
 
   /* beach-family palette (event body) */
   --sand: #fff8eb;
@@ -111,17 +160,17 @@ h3 {
   color: var(--text);
 }
 h1 {
-  font-size: 2rem;
+  font-size: var(--text-xl);
 }
 h2 {
-  font-size: 1.5rem;
+  font-size: var(--text-lg);
 }
 h3 {
-  font-size: 1.15rem;
+  font-size: var(--text-md);
 }
 
 p {
-  margin: 0 0 1rem;
+  margin: 0 0 var(--space-md);
 }
 
 a {
@@ -132,27 +181,90 @@ a:hover {
   text-decoration: underline;
 }
 
+/* hero — the neon "lit tube" wordmark. Letters glow scarlet, flicker to life on
+   load and ~once per 60s. The only place the flicker is earned (it fires once). */
+.hero {
+  --lit: 0 0 4px rgba(255, 120, 110, 0.85), 0 0 14px rgba(var(--accent-rgb), 0.8),
+    0 0 32px rgba(var(--accent-rgb), 0.5);
+  --dim: 0 0 3px rgba(255, 120, 110, 0.3), 0 0 8px rgba(var(--accent-rgb), 0.32);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-xl);
+  line-height: 1.1;
+  margin: 0 0 0.3em;
+  color: #ff4a3f; /* lit-tube hue (a touch brighter than --accent) */
+  text-shadow: var(--lit);
+  animation: neonOn 60s linear infinite;
+}
+@keyframes neonOn {
+  0% {
+    opacity: 0.35;
+    text-shadow: var(--dim);
+  }
+  0.2% {
+    opacity: 1;
+    text-shadow: var(--lit);
+  }
+  0.45% {
+    opacity: 0.5;
+    text-shadow: var(--dim);
+  }
+  0.7% {
+    opacity: 1;
+    text-shadow: var(--lit);
+  }
+  100% {
+    opacity: 1;
+    text-shadow: var(--lit);
+  }
+}
+
+/* subhead / tagline — the line that sits under a hero or page title */
+.subhead {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: var(--text-md);
+  line-height: 1.4;
+  color: var(--muted);
+  margin: 0 0 var(--space-lg);
+}
+
+/* body copy — a prose block held to a comfortable measure */
+.copy {
+  font-family: var(--font-body);
+  font-size: var(--text-base);
+  line-height: 1.65;
+  max-width: var(--measure);
+  color: var(--text);
+}
+.copy > :last-child {
+  margin-bottom: 0;
+}
+
 /* ─── layout primitives ─── */
 .container {
   width: 100%;
   max-width: var(--container);
   margin: 0 auto;
-  padding: 2.5rem 1.25rem 3.5rem;
+  padding: var(--space-2xl) var(--space-lg) var(--space-3xl);
 }
 .center {
   text-align: center;
 }
 
 .page-title {
-  font-size: 1.45rem;
-  margin: 0 0 1.5rem;
+  font-size: var(--text-lg);
+  margin: 0 0 var(--space-lg);
 }
 
 .card {
   background: var(--surface);
   border: 1px solid var(--hair);
   border-radius: var(--radius);
-  padding: 1.25rem;
+  padding: var(--space-lg);
+}
+.card > :last-child {
+  margin-bottom: 0;
 }
 
 .muted {
@@ -162,19 +274,23 @@ a:hover {
 /* ─── buttons ─── */
 button,
 .button {
+  position: relative;
   font: inherit;
+  font-weight: 600;
+  font-size: 0.95rem;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.4rem;
-  padding: 0.7rem 1.25rem;
+  padding: 0.65rem 1.2rem;
   border-radius: var(--radius-sm);
   border: none;
   background: var(--accent);
   color: var(--accent-ink);
-  font-weight: 600;
   text-decoration: none;
+  box-shadow: var(--glow-btn);
+  transition: background 140ms ease;
 }
 button:hover,
 .button:hover {
@@ -192,16 +308,22 @@ button.ghost,
   background: transparent;
   color: var(--text);
   border: 1px solid var(--hair);
+  box-shadow: none;
 }
 button.ghost:hover,
 .button.ghost:hover {
-  background: color-mix(in srgb, var(--text) 10%, transparent);
+  background: color-mix(in srgb, var(--text) 9%, transparent);
 }
 /* compact size — shared, so admin actions / utility buttons stay consistent */
 button.sm,
 .button.sm {
-  padding: 0.35rem 0.7rem;
-  font-size: 0.85rem;
+  padding: 0.34rem 0.65rem;
+  font-size: 0.8rem;
+  box-shadow: var(--glow-btn-sm);
+}
+button.ghost.sm,
+.button.ghost.sm {
+  box-shadow: none;
 }
 /* destructive (outline) — shared variant for delete affordances */
 button.danger,
@@ -209,6 +331,7 @@ button.danger,
   background: transparent;
   color: var(--accent);
   border: 1px solid var(--accent);
+  box-shadow: none;
 }
 button.danger:hover,
 .button.danger:hover {
@@ -216,41 +339,322 @@ button.danger:hover,
   color: var(--accent-ink);
 }
 
-/* status pill — e.g. a "Coming soon" badge on a stubbed feature */
+/* radiate: hover-only rings of glow that emanate outward (two offset rings, no
+   restart pop). Color via --ring/--ring-a so the variant retints. */
+button.radiate,
+.button.radiate {
+  --ring: var(--accent-rgb);
+  --ring-a: 0.55;
+}
+button.ghost.radiate,
+.button.ghost.radiate {
+  --ring: var(--focus-rgb);
+  --ring-a: 0.6;
+}
+button.radiate::before,
+button.radiate::after,
+.button.radiate::before,
+.button.radiate::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+}
+button.radiate:hover::before,
+.button.radiate:hover::before {
+  animation: radiate 6s ease-out infinite;
+}
+button.radiate:hover::after,
+.button.radiate:hover::after {
+  animation: radiate 6s ease-out infinite 3s;
+}
+@keyframes radiate {
+  0% {
+    opacity: 0;
+    box-shadow: 0 0 10px 0 rgba(var(--ring), var(--ring-a));
+  }
+  20% {
+    opacity: 0.78;
+  }
+  100% {
+    opacity: 0;
+    box-shadow: 0 0 12px 18px rgba(var(--ring), 0);
+  }
+}
+
+/* status pill — neon badge, e.g. a "Coming soon" marker on a stubbed feature */
 .badge {
   display: inline-block;
-  font-size: 0.72rem;
+  font-size: var(--text-xs);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent);
-  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  color: var(--accent-text);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-pill);
-  padding: 4px 12px;
-  background: color-mix(in srgb, var(--accent) 8%, transparent);
+  padding: var(--space-2xs) var(--space-sm);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  box-shadow: var(--glow-pill);
+  text-shadow: 0 0 8px rgba(var(--accent-rgb), 0.85);
 }
 
 /* ─── inputs ─── */
 input[type="text"],
-input[type="number"] {
+input[type="number"],
+input[type="search"],
+textarea,
+select {
   font: inherit;
-  padding: 0.6rem 0.75rem;
+  width: 100%;
+  padding: 0.6rem 0.8rem;
+  color: var(--text);
+  background: var(--input-bg);
   border: 1px solid var(--hair);
   border-radius: var(--radius-sm);
-  background: var(--input-bg);
-  color: var(--text);
-  width: 100%;
+  transition: border-color 120ms ease, box-shadow 120ms ease;
 }
-input:focus {
-  outline: 2px solid var(--focus);
-  outline-offset: 1px;
+::placeholder {
+  color: var(--muted);
 }
-label {
+textarea {
+  min-height: 92px;
+  resize: vertical;
+  line-height: 1.5;
+}
+/* focus — warm near-white ring + bloom (ghost-button tone); scarlet stays the error signal */
+input:focus,
+textarea:focus,
+select:focus {
+  outline: none;
+  border-color: rgba(var(--focus-rgb), 0.55);
+  box-shadow: 0 0 0 3px rgba(var(--focus-rgb), 0.15), 0 0 14px rgba(var(--focus-rgb), 0.16);
+}
+input:disabled,
+textarea:disabled,
+select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+label,
+.label {
   display: block;
   font-weight: 600;
-  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+  margin-bottom: 0.35rem;
+  color: var(--text);
 }
 .field {
-  margin-bottom: 1rem;
+  margin-bottom: 1.1rem;
+}
+.help {
+  font-size: 0.8rem;
+  color: var(--muted);
+  margin: 0.3rem 0 0;
+}
+/* error — scarlet is reserved for this */
+.field.error label,
+.field.error .label,
+.field.error .help {
+  color: var(--accent-text);
+}
+.field.error input,
+.field.error textarea,
+.field.error select,
+input.error {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.14);
+}
+/* a focused error field keeps a distinct focus change — warm halo layered over the error tint */
+.field.error input:focus,
+.field.error textarea:focus,
+.field.error select:focus,
+input.error:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(var(--accent-rgb), 0.18), 0 0 0 6px rgba(var(--focus-rgb), 0.22);
+}
+/* select — custom caret */
+.select-wrap {
+  position: relative;
+}
+.select-wrap select {
+  appearance: none;
+  -webkit-appearance: none;
+  padding-right: 2rem;
+}
+.select-wrap::after {
+  content: "▾";
+  position: absolute;
+  right: 0.85rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  pointer-events: none;
+}
+/* search — leading-magnifier (filter-as-you-type) and input + button (fired query) */
+.search-ic {
+  position: relative;
+}
+.search-ic .mag {
+  position: absolute;
+  left: 0.75rem;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--muted);
+  display: grid;
+  pointer-events: none;
+}
+.search-ic input {
+  padding-left: 2.25rem;
+}
+.search-btn {
+  display: flex;
+  gap: 0.6rem;
+}
+.search-btn input {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── table ─── (scoped to .table so it never bleeds into a bare <table>) */
+.table-frame {
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  overflow-x: auto; /* a wide table scrolls rather than clipping on narrow screens */
+}
+.table-frame > .table {
+  margin: 0;
+}
+table.table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  font-size: 0.9rem;
+}
+.table thead th {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 0.82rem;
+  text-align: left;
+  padding: 0.6rem 0.85rem;
+  background: color-mix(in srgb, var(--text) 6%, transparent);
+  border-bottom: 1px solid var(--hair);
+}
+.table td {
+  padding: 0.6rem 0.85rem;
+  border-bottom: 1px solid var(--hair);
+}
+.table tbody tr:last-child td {
+  border-bottom: none;
+}
+.table td.amt {
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+.table tr.paid td {
+  opacity: 0.5;
+  text-decoration: line-through;
+}
+
+/* ─── modal / dialog ─── (appearance only — open/close behavior lands with a feature) */
+.modal-scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 50;
+  display: grid;
+  place-items: center;
+  padding: var(--space-lg);
+  background: var(--scrim);
+  backdrop-filter: blur(2px);
+}
+.modal {
+  width: 100%;
+  max-width: var(--container-narrow);
+  background: var(--surface);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius-lg);
+  padding: var(--space-lg);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, 0.55);
+}
+.modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+.modal-title {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 1.25rem; /* ratified modal-title size (between --text-md and --text-lg) */
+  margin: 0;
+}
+.modal-close {
+  flex: none;
+  background: none;
+  border: none;
+  box-shadow: none;
+  padding: 0;
+  font-size: 1.1rem;
+  line-height: 1;
+  color: var(--muted);
+}
+.modal-close:hover {
+  background: none;
+  color: var(--text);
+}
+.modal-body {
+  color: var(--muted);
+  margin: var(--space-sm) 0 0;
+}
+.modal-actions {
+  display: flex;
+  gap: var(--space-sm);
+  justify-content: flex-end;
+  margin-top: var(--space-lg);
+}
+
+/* ─── alert / callout ─── two variants (single-accent palette): info + alert */
+.alert {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-sm);
+  padding: var(--space-md) var(--space-md);
+  border: 1px solid var(--hair);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 85%, transparent);
+}
+.alert-icon {
+  flex: none;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  font-size: 0.8rem;
+  border: 1px solid var(--hair);
+  color: var(--muted);
+}
+.alert-title {
+  font-weight: 600;
+  margin: 0 0 0.15rem;
+}
+.alert-body {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+.alert.alert-danger {
+  border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  background: color-mix(in srgb, var(--accent) 9%, transparent);
+}
+.alert.alert-danger .alert-icon {
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.45);
+}
+.alert.alert-danger .alert-title {
+  color: var(--accent-text);
 }
 
 /* ─── shell: header / nav ─── */
@@ -328,6 +732,7 @@ label {
 
 /* ─── promo pill (B2): reusable "what's on" slot, used on / and /events ─── */
 .promo {
+  position: relative;
   display: inline-flex;
   align-items: center;
   gap: 10px;
@@ -335,13 +740,34 @@ label {
   font-size: 0.9rem;
   padding: 7px 16px;
   border-radius: var(--radius-pill);
-  background: color-mix(in srgb, var(--accent) 10%, transparent);
-  border: 1px solid color-mix(in srgb, var(--accent) 34%, transparent);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  border: 1px solid var(--accent);
   color: color-mix(in srgb, var(--accent) 35%, var(--text));
+  /* neon ring to match the badge — reads like a time-limited CTA */
+  box-shadow: var(--glow-pill);
+  --ring: var(--accent-rgb);
+  --ring-a: 0.55;
 }
 .promo:hover {
   text-decoration: none;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
+}
+/* radiate on hover, same as buttons */
+.promo::before,
+.promo::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  z-index: -1;
+  opacity: 0;
+  pointer-events: none;
+}
+.promo:hover::before {
+  animation: radiate 6s ease-out infinite;
+}
+.promo:hover::after {
+  animation: radiate 6s ease-out infinite 3s;
 }
 .promo .pdot {
   width: 7px;
@@ -352,6 +778,23 @@ label {
 }
 .promo .arr {
   color: var(--accent);
+}
+
+/* ─── motion: all signature motion is CSS-only and honors reduced-motion ─── */
+@media (prefers-reduced-motion: reduce) {
+  .hero {
+    animation: none;
+    opacity: 1;
+    text-shadow: var(--lit);
+  }
+  button.radiate:hover::before,
+  button.radiate:hover::after,
+  .button.radiate:hover::before,
+  .button.radiate:hover::after,
+  .promo:hover::before,
+  .promo:hover::after {
+    animation: none;
+  }
 }
 
 /* ─── responsive: 3 short links stay inline at mobile widths (no hamburger) ─── */

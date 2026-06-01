@@ -8,9 +8,10 @@ Admin login is self-hosted WebAuthn (passkeys) — see [Admin auth](#admin-auth)
 ## Routes
 
 The site is a shared shell (header nav + footer + one design-token system) that
-every page renders inside. The default theme is the "Campari" dark palette; a
+every page renders inside. The default theme is the "Dive Bar" dark palette; a
 theme is just a token-value override (`[data-theme="…"]`), so a page or event can
-retint the whole shell without changing its structure.
+retint the whole shell without changing its structure. The tokens and shared
+primitives are catalogued live on [`/styleguide`](https://grunglebird.com/styleguide).
 
 | Route | What | In nav |
 |---|---|---|
@@ -20,6 +21,7 @@ retint the whole shell without changing its structure.
 | `/events` | Index of events; points at the current one | yes |
 | `/events/framily-beach-bar-2026` | Mike's Beach Bar — the event page with its pledge form, beach-themed | via `/events` + home |
 | `/juice` | Superjuice (pseudo-citrus) calculators — parked utility, not in nav | no |
+| `/styleguide` | Living registry — every design token + shared primitive on one page | no |
 | `/admin` | Admin sign-in / pledge management — the permanent sign-in escape hatch | affordance shown only when signed in |
 
 ## Mike's Beach Bar
