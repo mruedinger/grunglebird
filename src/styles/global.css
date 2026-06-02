@@ -79,10 +79,11 @@
   --radius-pill: 999px;
 }
 
-/* — Beach: Mike's Beach Bar event theme. Reassigns the shared tokens to the
-   sand/ocean/sunset palette, and exposes the beach-family names the event body
-   uses for its poster styling. Same token names ⇒ the shell + the poster's shared
-   primitives (buttons/inputs/cards) retint to match. */
+/* — Beach: Mike's Beach Bar event theme. Reassigns the shared SHELL / global tokens to
+   the sand/ocean/sunset palette so the shell (nav/header/footer) and any global primitive
+   retint to match. The poster BODY owns its bespoke palette locally as --poster-* tokens
+   (see src/pages/events/framily-beach-bar-2026.astro) — a self-contained island that only
+   *respects* these shell tokens; global changes don't reach it and it doesn't reach out (#44). */
 [data-theme="beach"] {
   --bg: #fff8eb;
   --bg-grad: #fff8eb;
@@ -91,7 +92,7 @@
   --text: #26201a;
   --muted: #6a584a;
   --hair: #e8cea0;
-  --control-border: color-mix(in srgb, var(--ink) 38%, transparent); /* readable field edge on the light theme */
+  --control-border: color-mix(in srgb, var(--text) 38%, transparent); /* readable field edge on the light theme */
 
   --accent: #ff5252;
   --accent-rgb: 255, 82, 82;
@@ -106,18 +107,6 @@
   --glow-btn: none;
   --glow-btn-sm: none;
   --glow-pill: none;
-
-  /* beach-family palette (event body) */
-  --sand: #fff8eb;
-  --sand-dark: #f0d9a8;
-  --paper: #fffcf3;
-  --line: #e8cea0;
-  --ocean: #00b4cc;
-  --ocean-dark: #006d7a;
-  --sun: #ffa726;
-  --sunset: #ff5252;
-  --ink: #26201a;
-  --ink-soft: #6a584a;
 }
 
 /* Opt-in accessibility: users who ask their OS for more contrast get a stronger
@@ -127,7 +116,7 @@
     --control-border: rgba(244, 233, 229, 0.4);
   }
   [data-theme="beach"] {
-    --control-border: color-mix(in srgb, var(--ink) 70%, transparent);
+    --control-border: color-mix(in srgb, var(--text) 70%, transparent);
   }
 }
 
