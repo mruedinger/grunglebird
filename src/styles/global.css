@@ -13,8 +13,17 @@
  *
  * Colors are tokens — including the reused/theme-bearing rgb triplets that drive
  * glows, focus rings, and the scarlet "alert text" (--accent-rgb / --focus-rgb /
- * --accent-text). Effect literals that are genuinely single-purpose (the neon
+ * --accent-legible). Effect literals that are genuinely single-purpose (the neon
  * hero's pink highlight, the near-black modal scrim/shadow) stay inline here.
+ *
+ * Naming conventions:
+ *   --on-X            content/ink color meant to sit ON an X-colored fill (e.g. --on-accent).
+ *   --<scale>-<step>  scale tokens are always suffixed (--radius-sm/-md/-lg, --space-*, --text-*);
+ *                     there is no bare base name.
+ *   --glow-<element>  a glow is named for the element it belongs to (--glow-btn/-pill/-brand).
+ * --accent-legible is the accent tuned to stay legible as text/foreground (brighter on dark,
+ * darker on beach). It is ALSO the single error/alert signal color (input error, .alert-danger
+ * title, danger-button text) — one deliberate role; don't split off a separate --error.
  */
 
 :root {
@@ -31,9 +40,9 @@
   --accent: #ff362b; /* scarlet ibis */
   --accent-rgb: 255, 54, 43; /* = --accent; drives glows / rings / radiate, retints per theme */
   --accent-hover: #ff5042; /* button hover fill */
-  --accent-ink: #1a0606; /* text on the accent fill */
-  --accent-text: #ff6a60; /* bright scarlet text: badge, input error, alert title */
-  --glow: rgba(var(--accent-rgb), 0.55); /* brand mark drop-shadow */
+  --on-accent: #1a0606; /* text on the accent fill */
+  --accent-legible: #ff6a60; /* bright scarlet text: badge, input error, alert title */
+  --glow-brand: rgba(var(--accent-rgb), 0.55); /* brand mark drop-shadow */
   --focus-rgb: 248, 238, 234; /* warm near-white focus ring (NOT scarlet — scarlet is reserved for errors) */
   --scrim: rgba(8, 4, 6, 0.66); /* modal backdrop */
 
@@ -74,7 +83,7 @@
 
   /* — radii — */
   --radius-sm: 12px; /* buttons / inputs */
-  --radius: 16px; /* cards / table / callout */
+  --radius-md: 16px; /* cards / table / callout */
   --radius-lg: 18px; /* modal */
   --radius-pill: 999px;
 }
@@ -97,9 +106,9 @@
   --accent: #ff5252;
   --accent-rgb: 255, 82, 82;
   --accent-hover: #ffa726;
-  --accent-ink: #ffffff;
-  --accent-text: #c62828; /* readable scarlet on the light theme */
-  --glow: rgba(var(--accent-rgb), 0.4);
+  --on-accent: #ffffff;
+  --accent-legible: #c62828; /* readable scarlet on the light theme */
+  --glow-brand: rgba(var(--accent-rgb), 0.4);
   --focus-rgb: 0, 180, 204; /* ocean */
   --scrim: rgba(38, 32, 26, 0.55);
 
@@ -262,7 +271,7 @@ a:hover {
 .card {
   background: var(--surface);
   border: 1px solid var(--hair);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   padding: var(--space-lg);
 }
 .card > :last-child {
@@ -289,7 +298,7 @@ button,
   border-radius: var(--radius-sm);
   border: none;
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--on-accent);
   text-decoration: none;
   box-shadow: var(--glow-btn);
   transition: background 140ms ease;
@@ -338,7 +347,7 @@ button.danger,
 button.danger:hover,
 .button.danger:hover {
   background: var(--accent);
-  color: var(--accent-ink);
+  color: var(--on-accent);
 }
 
 /* radiate: hover-only rings of glow that emanate outward (two offset rings, no
@@ -393,7 +402,7 @@ button.radiate:hover::after,
   font-size: var(--text-xs);
   letter-spacing: 0.16em;
   text-transform: uppercase;
-  color: var(--accent-text);
+  color: var(--accent-legible);
   border: 1px solid var(--accent);
   border-radius: var(--radius-pill);
   padding: var(--space-2xs) var(--space-sm);
@@ -459,7 +468,7 @@ label,
 .field.error label,
 .field.error .label,
 .field.error .help {
-  color: var(--accent-text);
+  color: var(--accent-legible);
 }
 .field.error input,
 .field.error textarea,
@@ -522,7 +531,7 @@ input.error:focus {
 /* ─── table ─── (scoped to .table so it never bleeds into a bare <table>) */
 .table-frame {
   border: 1px solid var(--hair);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   overflow-x: auto; /* a wide table scrolls rather than clipping on narrow screens */
 }
 .table-frame > .table {
@@ -623,7 +632,7 @@ table.table {
   gap: var(--space-sm);
   padding: var(--space-md) var(--space-md);
   border: 1px solid var(--hair);
-  border-radius: var(--radius);
+  border-radius: var(--radius-md);
   background: color-mix(in srgb, var(--surface) 85%, transparent);
 }
 .alert-icon {
@@ -656,7 +665,7 @@ table.table {
   box-shadow: 0 0 10px rgba(var(--accent-rgb), 0.45);
 }
 .alert.alert-danger .alert-title {
-  color: var(--accent-text);
+  color: var(--accent-legible);
 }
 
 /* ─── shell: header / nav ─── */
@@ -681,7 +690,7 @@ table.table {
   height: 32px;
   width: auto;
   fill: var(--accent);
-  filter: drop-shadow(0 0 9px var(--glow));
+  filter: drop-shadow(0 0 9px var(--glow-brand));
   transition: fill 160ms ease, filter 160ms ease;
 }
 .brand:hover svg {
