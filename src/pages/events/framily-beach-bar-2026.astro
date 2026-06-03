@@ -55,7 +55,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
     rel="stylesheet"
   />
 
-  <main class="container center event-poster">
+  <main class="container event-poster">
     <header>
       <h1>Mike's Beach Bar</h1>
       <p>
@@ -83,7 +83,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
         </article>
       </div>
 
-      <p class="muted">(and more!)</p>
+      <p class="poster-muted">(and more!)</p>
     </section>
 
     <section>
@@ -99,7 +99,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
         Here's how your contributions have helped so far
       </p>
 
-      <div id="meter" class="meter card" data-milestones={JSON.stringify(milestones)}>
+      <div id="meter" class="meter poster-panel" data-milestones={JSON.stringify(milestones)}>
         <div class="meter-bar">
           <div class="meter-fill" style="width:0%"></div>
           {milestones.map((m) => (
@@ -108,7 +108,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
             </div>
           ))}
         </div>
-        <p class="meter-status muted">Loading current pledges…</p>
+        <p class="meter-status poster-muted">Loading current pledges…</p>
       </div>
 
       <ul class="milestones">
@@ -124,7 +124,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
 
     <section>
       <h2>Suggested donations</h2>
-      <p class="muted">Click an amount to fill in the pledge form below</p>
+      <p class="poster-muted">Click an amount to fill in the pledge form below</p>
       <div class="donations">
         {suggested.map((s) => (
           <button
@@ -145,43 +145,43 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
 
     <section id="pledge-section">
       <h2>Contribute</h2>
-      <p class="muted">
+      <p class="poster-muted">
         Pay what you can - Mike's bar will exist no matter what, but with your help it'll be even more awesome
       </p>
 
-      <div id="my-pledge-banner" class="card banner" hidden>
+      <div id="my-pledge-banner" class="poster-panel banner" hidden>
         <p>
           You pledged <strong id="my-pledge-amount"></strong> as
           <strong id="my-pledge-name"></strong>.
         </p>
         <div class="banner-actions">
-          <button type="button" id="my-pledge-edit">Edit</button>
-          <button type="button" id="my-pledge-delete" class="danger">Delete</button>
+          <button type="button" id="my-pledge-edit" class="poster-btn">Edit</button>
+          <button type="button" id="my-pledge-delete" class="poster-btn poster-btn-danger">Delete</button>
         </div>
       </div>
 
-      <form id="pledge-form" class="card">
-        <div class="field">
+      <form id="pledge-form" class="poster-panel">
+        <div class="poster-field">
           <label for="amount">Enter any amount (USD)</label>
           <input type="number" id="amount" name="amount" min="1" max="10000" step="1" required />
         </div>
-        <div class="field">
+        <div class="poster-field">
           <label for="name">Your name</label>
           <input type="text" id="name" name="name" maxlength="50" required />
         </div>
-        <div class="field">
+        <div class="poster-field">
           <label for="venmo">Venmo handle</label>
           <input type="text" id="venmo" name="venmo" maxlength="50" placeholder="@yourhandle" required />
-          <p class="muted">Only Mike sees this. He'll Venmo you after total contributions hit at least $500.</p>
+          <p class="poster-muted">Only Mike sees this. He'll Venmo you after total contributions hit at least $500.</p>
         </div>
-        <div class="field checkbox">
+        <div class="poster-field checkbox">
           <label>
             <input type="checkbox" id="is_private" name="is_private" checked />
             Keep my name private (show as "Anonymous" on the public list)
           </label>
         </div>
-        <button type="submit">Pledge</button>
-        <p id="pledge-status" class="muted" aria-live="polite"></p>
+        <button type="submit" class="poster-btn">Pledge</button>
+        <p id="pledge-status" class="poster-muted" aria-live="polite"></p>
       </form>
     </section>
 
@@ -191,7 +191,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
         <article class="pledge-card">
           <table id="pledge-list" class="pledges">
             <tbody>
-              <tr class="empty"><td colspan="2" class="muted">Loading…</td></tr>
+              <tr class="empty"><td colspan="2">Loading…</td></tr>
             </tbody>
           </table>
         </article>
@@ -252,7 +252,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       const tbody = document.querySelector('#pledge-list tbody')!;
       tbody.innerHTML = '';
       if (pledges.length === 0) {
-        tbody.innerHTML = '<tr class="empty"><td colspan="2" class="muted">No pledges yet — be the first!</td></tr>';
+        tbody.innerHTML = '<tr class="empty"><td colspan="2">No pledges yet — be the first!</td></tr>';
       } else {
         for (const p of pledges) {
           const tr = document.createElement('tr');
@@ -362,16 +362,58 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
   </script>
 
   <style>
-    /* Event-body exception: bespoke poster fonts, scoped to this page only.
-       The shell (nav/footer) keeps the site display font (Bricolage)/Inter; only
-       this body restyles its own headings/links. Colors come from the beach token
-       override. */
+    /* ─── Poster island (#44) ────────────────────────────────────────────────
+       This event poster is a self-contained style island. Its bespoke palette and
+       every bespoke element (buttons, panels, inputs, fields, muted text) are defined
+       LOCALLY here and scoped to this page by Astro — a change to a global primitive
+       can't reach in, and nothing here reaches out. The only things it shares with the
+       rest of the site are the shell (nav/header/footer, outside this <main>) and the
+       max content width (.container). Plain body copy *respects* the shell-retint
+       tokens (--text/--font-body) the same way it respects max-width; bespoke fonts
+       (Bungee Shade / Yellowtail / Limelight) are the sanctioned event-body exception. */
+
+    /* — local palette: literals this poster owns, independent of the shell — */
+    .event-poster {
+      text-align: center;
+      --poster-sand: #fff8eb;
+      --poster-sand-dark: #f0d9a8;
+      --poster-paper: #fffcf3;
+      --poster-line: #e8cea0;
+      --poster-ocean: #00b4cc;
+      --poster-ocean-dark: #006d7a;
+      --poster-sun: #ffa726;
+      --poster-sunset: #ff5252;
+      --poster-ink: #26201a;
+      --poster-ink-soft: #6a584a;
+      --poster-input-bg: #ffffff;
+      --poster-action-ink: #ffffff; /* text on a filled button */
+      --poster-focus-rgb: 0, 180, 204; /* ocean focus ring */
+      --poster-field-border: color-mix(in srgb, var(--poster-ink) 38%, transparent);
+    }
+    @media (prefers-contrast: more) {
+      .event-poster {
+        --poster-field-border: color-mix(in srgb, var(--poster-ink) 70%, transparent);
+      }
+    }
+
+    /* — sever the borrowed bare elements: reset, then rebuild locally below. This
+         reset is qualified so it beats the global bare button/input/label rules; every
+         rebuild carries .event-poster + its class/type so it beats this reset under
+         either Astro scoping strategy. — */
+    .event-poster button,
+    .event-poster input,
+    .event-poster label {
+      all: revert;
+      box-sizing: border-box;
+    }
+
+    /* — bespoke headings + links — */
     h1 {
       font-family: "Bungee Shade", Georgia, serif;
       font-weight: 400;
       font-size: 2.75rem;
       line-height: 1.2;
-      color: var(--sunset);
+      color: var(--poster-sunset);
       margin: 0 0 0.5em;
     }
     h2 {
@@ -380,14 +422,85 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       font-size: 2.25rem;
       line-height: 1.3;
       margin: 2.5rem 0 0.5rem;
-      color: var(--ocean-dark);
+      color: var(--poster-ocean-dark);
     }
     h3 {
       font-size: 1.15rem;
     }
-    a {
-      color: var(--ocean);
+    .event-poster a {
+      color: var(--poster-ocean);
+      text-decoration: none;
     }
+    .event-poster a:hover {
+      text-decoration: underline;
+    }
+
+    /* — local buttons (frozen from main's beach look; no .radiate on main) — */
+    .event-poster .poster-btn {
+      font: inherit;
+      font-size: 0.95rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.4rem;
+      padding: 0.65rem 1.2rem;
+      border: none;
+      border-radius: 12px;
+      text-decoration: none;
+      box-shadow: none;
+      background: var(--poster-sunset);
+      color: var(--poster-action-ink);
+      transition: background 140ms ease;
+    }
+    .event-poster .poster-btn:hover { background: var(--poster-sun); }
+    .event-poster .poster-btn-danger {
+      background: transparent;
+      color: var(--poster-sunset);
+      border: 1px solid var(--poster-sunset);
+    }
+    .event-poster .poster-btn-danger:hover {
+      background: var(--poster-sunset);
+      color: var(--poster-action-ink);
+    }
+    .event-poster button:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+
+    /* — local inputs / fields / labels (frozen from main's beach look) — */
+    .event-poster input[type="text"],
+    .event-poster input[type="number"] {
+      font: inherit;
+      width: 100%;
+      padding: 0.6rem 0.8rem;
+      color: var(--poster-ink);
+      background: var(--poster-input-bg);
+      border: 1px solid var(--poster-field-border);
+      border-radius: 12px;
+      transition: border-color 120ms ease, box-shadow 120ms ease;
+    }
+    .event-poster ::placeholder {
+      color: var(--poster-ink-soft);
+    }
+    .event-poster input:focus {
+      outline: none;
+      border-color: rgba(var(--poster-focus-rgb), 0.55);
+      box-shadow: 0 0 0 3px rgba(var(--poster-focus-rgb), 0.15), 0 0 14px rgba(var(--poster-focus-rgb), 0.16);
+    }
+    .event-poster input:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    .event-poster label {
+      display: block;
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin-bottom: 0.35rem;
+      color: var(--poster-ink);
+    }
+    .poster-field { margin-bottom: 1.1rem; }
 
     .menu-cards {
       display: grid;
@@ -396,8 +509,8 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       margin: 1rem 0 0.5rem;
     }
     .menu-card {
-      background: var(--paper);
-      border: 1px solid var(--line);
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
       border-radius: 12px;
       padding: 1rem 0.75rem;
     }
@@ -405,7 +518,8 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       margin: 0 0 0.75rem;
       letter-spacing: 0.05em;
       font-size: 1.4rem;
-      color: var(--ink-soft);
+      line-height: 1.15;
+      color: var(--poster-ink-soft);
       font-family: "Limelight", Georgia, serif;
       font-weight: 400;
     }
@@ -415,7 +529,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       margin: 0;
       font-size: 1rem;
       line-height: 1.6;
-      color: var(--ink);
+      color: var(--poster-ink);
       overflow-wrap: anywhere;
     }
     @media (max-width: 600px) {
@@ -426,12 +540,12 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
     .meter-bar {
       position: relative;
       height: 18px;
-      background: var(--sand-dark);
+      background: var(--poster-sand-dark);
       border-radius: 9px;
     }
     .meter-fill {
       height: 100%;
-      background: linear-gradient(90deg, var(--sun), var(--sunset));
+      background: linear-gradient(90deg, var(--poster-sun), var(--poster-sunset));
       border-radius: 9px;
       transition: width 0.6s ease;
     }
@@ -446,7 +560,7 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       display: block;
       width: 2px;
       height: 26px;
-      background: var(--ocean-dark);
+      background: var(--poster-ocean-dark);
       margin: 0 auto;
     }
     .meter-marker span {
@@ -455,16 +569,16 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       left: 50%;
       transform: translateX(-50%);
       font-size: 0.75rem;
-      color: var(--ink-soft);
+      color: var(--poster-ink-soft);
       white-space: nowrap;
     }
-    .meter-marker.hit::before { background: var(--sunset); }
+    .meter-marker.hit::before { background: var(--poster-sunset); }
     .meter-status { margin: 2.5rem 0 0; }
 
     .milestones { list-style: none; padding: 0; }
     .milestones li {
       padding: 0.6rem 0;
-      border-bottom: 1px dashed var(--line);
+      border-bottom: 1px dashed var(--poster-line);
     }
     .milestones li:last-child { border-bottom: none; }
 
@@ -473,47 +587,48 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 0.75rem;
     }
-    .donation {
-      /* reset the shared button's inline-flex so amount/description stack */
+    .event-poster .donation {
+      /* stacks amount/description (overrides the inline-flex button base) */
+      font: inherit;
       display: block;
       text-align: center;
-      background: var(--paper);
-      border: 1px solid var(--line);
-      color: var(--ink);
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
+      color: var(--poster-ink);
       padding: 1rem;
       border-radius: 10px;
       cursor: pointer;
       transition: transform 0.1s, background 0.1s;
       font-weight: normal;
     }
-    .donation:hover {
-      background: var(--sand);
+    .event-poster .donation:hover {
+      background: var(--poster-sand);
       transform: translateY(-1px);
     }
     .donation-amount {
       font-size: 1.4rem;
       font-weight: 400;
-      color: var(--ink-soft);
+      color: var(--poster-ink-soft);
       font-family: "Limelight", Georgia, serif;
     }
     .donation-desc {
       font-size: 0.85rem;
-      color: var(--ink-soft);
+      color: var(--poster-ink-soft);
       margin-top: 0.25rem;
     }
-    .donation.featured {
-      border-color: var(--sun);
+    .event-poster .donation.featured {
+      border-color: var(--poster-sun);
       border-width: 2px;
     }
 
-    .field.checkbox label {
+    .event-poster .poster-field.checkbox label {
       display: flex;
       justify-content: center;
       align-items: center;
       gap: 0.5rem;
       font-weight: 400;
     }
-    .field.checkbox input { width: auto; }
+    .event-poster .poster-field.checkbox input { width: auto; }
 
     .pledge-wrap {
       display: grid;
@@ -522,8 +637,8 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
     }
     .pledge-card {
       grid-column: 2;
-      background: var(--paper);
-      border: 1px solid var(--line);
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
       border-radius: 12px;
       padding: 1rem 0.75rem;
     }
@@ -546,18 +661,30 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       text-align: right;
       padding-right: 0.6rem;
       font-weight: 700;
-      color: var(--ocean-dark);
+      color: var(--poster-ocean-dark);
     }
     .pledges :global(td.pl-name) {
       text-align: left;
       padding-left: 0.6rem;
     }
-    .pledges :global(tr.empty td) { text-align: center; padding: 0.5rem 0; width: auto; }
+    .pledges :global(tr.empty td) {
+      text-align: center;
+      padding: 0.5rem 0;
+      width: auto;
+      color: var(--poster-ink-soft);
+    }
 
+    .poster-panel {
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
+      border-radius: 16px;
+      padding: 24px;
+    }
+    .poster-panel > :last-child { margin-bottom: 0; }
     .banner {
-      /* soft sun-tinted highlight, derived from theme tokens (no hardcoded color) */
-      background: color-mix(in srgb, var(--sun) 15%, var(--paper));
-      border-color: var(--sun);
+      /* soft sun-tinted highlight, derived from the local poster tokens */
+      background: color-mix(in srgb, var(--poster-sun) 15%, var(--poster-paper));
+      border-color: var(--poster-sun);
       margin-bottom: 1rem;
     }
     .banner p { margin: 0 0 0.5rem; }
@@ -566,6 +693,6 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       justify-content: center;
       gap: 0.5rem;
     }
-    /* Delete uses the shared .danger variant (sunset outline on the beach theme). */
+    .poster-muted { color: var(--poster-ink-soft); }
   </style>
 </Layout>

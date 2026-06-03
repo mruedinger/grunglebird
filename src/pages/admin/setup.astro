@@ -22,7 +22,7 @@ if (!allowed) Astro.response.status = 404;
         Register your first passkey (store it in 1Password so it syncs to your other devices).
         You'll get a one-time recovery code — save it.
       </p>
-      <button id="setup-btn">Register passkey</button>
+      <button id="setup-btn" class="button">Register passkey</button>
       <p class="setup-msg muted" id="setup-msg"></p>
     </main>
 
@@ -70,9 +70,6 @@ if (!allowed) Astro.response.status = 404;
     <style>
       .setup { max-width: var(--container-narrow); }
       .setup-msg { min-height: 1.2em; margin-top: var(--space-md); }
-      /* inline code: the small radius/padding have no scale step (no inline-code
-         primitive in the system yet — that's #36 territory). Deliberate one-off. */
-      code { background: color-mix(in srgb, var(--text) 10%, transparent); padding: 0.1rem 0.3rem; border-radius: 4px; }
     </style>
   </Layout>
 ) : (
