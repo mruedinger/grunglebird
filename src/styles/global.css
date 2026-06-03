@@ -301,13 +301,13 @@ a:hover {
   color: var(--on-accent);
   text-decoration: none;
   filter: drop-shadow(0 0 0 rgba(var(--glow-rgb), 0)); /* matte at rest */
-  transition: background 140ms ease, filter 1s ease-in; /* fade-OUT: lazy exhale, interruptible */
+  transition: background 140ms ease, color 140ms ease, filter 1s ease-in; /* fade-OUT: lazy exhale, interruptible */
 }
 .button:not(:disabled):hover {
   background: var(--accent-hover);
   text-decoration: none;
   filter: drop-shadow(0 0 var(--glow-blur) rgba(var(--glow-rgb), var(--glow-a)));
-  transition: background 140ms ease, filter 0.3s ease; /* fade-IN: fast */
+  transition: background 140ms ease, color 140ms ease, filter 0.3s ease; /* fade-IN: fast */
 }
 .button:disabled {
   opacity: 0.6;
@@ -326,14 +326,16 @@ a:hover {
 .button.ghost:not(:disabled):hover {
   background: color-mix(in srgb, var(--text) 16%, var(--surface));
 }
-/* danger — "ghost with red": opaque, accent border + legible scarlet text; keeps the red glow */
+/* danger — "ghost with red" at rest: opaque accent tint + accent border + legible scarlet text, red
+   glow. On hover it fills solid accent with dark ink so it reads loud — the destructive call-out. */
 .button.danger {
   background: color-mix(in srgb, var(--accent) 12%, var(--surface));
   color: var(--accent-legible);
   border: 1px solid var(--accent);
 }
 .button.danger:not(:disabled):hover {
-  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
+  background: var(--accent);
+  color: var(--on-accent);
 }
 /* compact size — shared, so admin actions / utility buttons stay consistent */
 .button.sm {
@@ -743,7 +745,7 @@ table.table {
   .button:not(:disabled):hover,
   .promo,
   .promo:hover {
-    transition: background 140ms ease;
+    transition: background 140ms ease, color 140ms ease;
   }
 }
 
