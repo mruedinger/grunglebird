@@ -55,6 +55,7 @@
   /* — type families — */
   --font-display: "Bricolage Grotesque", system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
   --font-body: "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
 
   /* — type scale: "Restrained" (~1.18) — */
   --text-xs: 0.75rem; /* caption / badge */
@@ -246,6 +247,25 @@ a:hover {
 }
 .copy > :last-child {
   margin-bottom: 0;
+}
+
+/* eyebrow — a section kicker/marker that labels what follows. Flat: no box, no glow.
+   Deeper --accent (vs inline code's lighter --accent-legible) so a structural kicker and
+   inline code read as different jobs, not "two reds for no reason." */
+.eyebrow {
+  margin: 0 0 var(--space-sm);
+  color: var(--accent);
+  font-size: var(--text-xs);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+}
+
+/* inline code — mono + legible scarlet, no chip/background. Single catalogued look for any
+   <code> in prose (paths, tokens, commands). Block/multiline code isn't styled yet. */
+code {
+  font-family: var(--font-mono);
+  font-size: 0.9em;
+  color: var(--accent-legible);
 }
 
 /* ─── layout primitives ─── */
