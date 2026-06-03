@@ -20,7 +20,9 @@
  *   --on-X            content/ink color meant to sit ON an X-colored fill (e.g. --on-accent).
  *   --<scale>-<step>  scale tokens are always suffixed (--radius-sm/-md/-lg, --space-*, --text-*);
  *                     there is no bare base name.
- *   --glow-<element>  a glow is named for the element it belongs to (--glow-btn/-pill/-brand).
+ *   --glow-<element>  a static glow named for the element it belongs to (--glow-pill/-brand).
+ *   --glow-rgb/-a/-blur  component-local knobs for the hover drop-shadow glow (hue / alpha / spread),
+ *                     set per button variant (see .button) and reused by .promo.
  * --accent-legible is the accent tuned to stay legible as text/foreground (brighter on dark,
  * darker on beach). It is ALSO the single error/alert signal color (input error, .alert-danger
  * title, danger-button text) — one deliberate role; don't split off a separate --error.
@@ -38,7 +40,7 @@
   --hair: rgba(244, 233, 229, 0.1);
 
   --accent: #ff362b; /* scarlet ibis */
-  --accent-rgb: 255, 54, 43; /* = --accent; drives glows / rings / radiate, retints per theme */
+  --accent-rgb: 255, 54, 43; /* = --accent; drives glows / rings, retints per theme */
   --accent-hover: #ff5042; /* button hover fill */
   --on-accent: #1a0606; /* text on the accent fill */
   --accent-legible: #ff6a60; /* bright scarlet text: badge, input error, alert title */
@@ -46,9 +48,8 @@
   --focus-rgb: 248, 238, 234; /* warm near-white focus ring (NOT scarlet — scarlet is reserved for errors) */
   --scrim: rgba(8, 4, 6, 0.66); /* modal backdrop */
 
-  /* neon glows — themeable so a light theme (e.g. beach) can switch them off */
-  --glow-btn: 0 0 8px rgba(var(--accent-rgb), 0.7), 0 0 30px rgba(var(--accent-rgb), 0.55);
-  --glow-btn-sm: 0 0 8px rgba(var(--accent-rgb), 0.35);
+  /* static neon ring — badge + the promo's resting state (the button/promo hover glow is a
+     component-local drop-shadow, see .button) */
   --glow-pill: 0 0 12px rgba(var(--accent-rgb), 0.5), inset 0 0 8px rgba(var(--accent-rgb), 0.22);
 
   /* — type families — */
@@ -111,11 +112,6 @@
   --glow-brand: rgba(var(--accent-rgb), 0.4);
   --focus-rgb: 0, 180, 204; /* ocean */
   --scrim: rgba(38, 32, 26, 0.55);
-
-  /* light theme: no neon glows on buttons / pills */
-  --glow-btn: none;
-  --glow-btn-sm: none;
-  --glow-pill: none;
 }
 
 /* Opt-in accessibility: users who ask their OS for more contrast get a stronger
@@ -282,9 +278,13 @@ a:hover {
   color: var(--muted);
 }
 
-/* ─── buttons ─── */
-button,
+/* ─── buttons ─── class-only `.button`; matte at rest, one drop-shadow glow that blooms on hover
+   and exhales slowly. No pseudo-elements, no radiate. Glow knobs (--glow-rgb/-a/-blur) are set per
+   variant; disabled is always static. A bare <button> with no .button class is unstyled. */
 .button {
+  --glow-rgb: var(--accent-rgb); /* glow hue — per variant */
+  --glow-a: 1; /* glow intensity — per variant */
+  --glow-blur: 10px; /* glow spread — smaller on .sm */
   position: relative;
   font: inherit;
   font-weight: 600;
@@ -300,100 +300,46 @@ button,
   background: var(--accent);
   color: var(--on-accent);
   text-decoration: none;
-  box-shadow: var(--glow-btn);
-  transition: background 140ms ease;
+  filter: drop-shadow(0 0 0 rgba(var(--glow-rgb), 0)); /* matte at rest */
+  transition: background 140ms ease, filter 1s ease-in; /* fade-OUT: lazy exhale, interruptible */
 }
-button:hover,
-.button:hover {
+.button:not(:disabled):hover {
   background: var(--accent-hover);
   text-decoration: none;
+  filter: drop-shadow(0 0 var(--glow-blur) rgba(var(--glow-rgb), var(--glow-a)));
+  transition: background 140ms ease, filter 0.3s ease; /* fade-IN: fast */
 }
-button:disabled,
 .button:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+  filter: none !important; /* disabled never glows… */
+  transition: none; /* …nor animates (e.g. a JS-disable while still hovered) */
 }
-/* ghost: shared secondary button variant (used by event + admin) */
-button.ghost,
+/* ghost — opaque secondary (event + admin); calm warm-white glow */
 .button.ghost {
-  background: transparent;
+  --glow-rgb: var(--focus-rgb);
+  --glow-a: 0.5;
+  background: color-mix(in srgb, var(--text) 10%, var(--surface));
   color: var(--text);
-  border: 1px solid var(--hair);
-  box-shadow: none;
+  border: 1px solid var(--control-border);
 }
-button.ghost:hover,
-.button.ghost:hover {
-  background: color-mix(in srgb, var(--text) 9%, transparent);
+.button.ghost:not(:disabled):hover {
+  background: color-mix(in srgb, var(--text) 16%, var(--surface));
+}
+/* danger — "ghost with red": opaque, accent border + legible scarlet text; keeps the red glow */
+.button.danger {
+  background: color-mix(in srgb, var(--accent) 12%, var(--surface));
+  color: var(--accent-legible);
+  border: 1px solid var(--accent);
+}
+.button.danger:not(:disabled):hover {
+  background: color-mix(in srgb, var(--accent) 26%, var(--surface));
 }
 /* compact size — shared, so admin actions / utility buttons stay consistent */
-button.sm,
 .button.sm {
+  --glow-blur: 6px;
   padding: 0.34rem 0.65rem;
   font-size: 0.8rem;
-  box-shadow: var(--glow-btn-sm);
-}
-button.ghost.sm,
-.button.ghost.sm {
-  box-shadow: none;
-}
-/* destructive (outline) — shared variant for delete affordances */
-button.danger,
-.button.danger {
-  background: transparent;
-  color: var(--accent);
-  border: 1px solid var(--accent);
-  box-shadow: none;
-}
-button.danger:hover,
-.button.danger:hover {
-  background: var(--accent);
-  color: var(--on-accent);
-}
-
-/* radiate: hover-only rings of glow that emanate outward (two offset rings, no
-   restart pop). Color via --ring/--ring-a so the variant retints. */
-button.radiate,
-.button.radiate {
-  --ring: var(--accent-rgb);
-  --ring-a: 0.55;
-}
-button.ghost.radiate,
-.button.ghost.radiate {
-  --ring: var(--focus-rgb);
-  --ring-a: 0.6;
-}
-button.radiate::before,
-button.radiate::after,
-.button.radiate::before,
-.button.radiate::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  z-index: -1;
-  opacity: 0;
-  pointer-events: none;
-}
-button.radiate:hover::before,
-.button.radiate:hover::before {
-  animation: radiate 6s ease-out infinite;
-}
-button.radiate:hover::after,
-.button.radiate:hover::after {
-  animation: radiate 6s ease-out infinite 3s;
-}
-@keyframes radiate {
-  0% {
-    opacity: 0;
-    box-shadow: 0 0 10px 0 rgba(var(--ring), var(--ring-a));
-  }
-  20% {
-    opacity: 0.78;
-  }
-  100% {
-    opacity: 0;
-    box-shadow: 0 0 12px 18px rgba(var(--ring), 0);
-  }
 }
 
 /* status pill — neon badge, e.g. a "Coming soon" marker on a stubbed feature */
@@ -600,12 +546,14 @@ table.table {
   font-size: 1.25rem; /* ratified modal-title size (between --text-md and --text-lg) */
   margin: 0;
 }
+/* close glyph — deliberately NOT a .button, so it neutralizes the browser <button> defaults itself */
 .modal-close {
   flex: none;
+  cursor: pointer;
   background: none;
   border: none;
-  box-shadow: none;
   padding: 0;
+  font-family: inherit;
   font-size: 1.1rem;
   line-height: 1;
   color: var(--muted);
@@ -754,31 +702,22 @@ table.table {
   background: color-mix(in srgb, var(--accent) 12%, transparent);
   border: 1px solid var(--accent);
   color: color-mix(in srgb, var(--accent) 35%, var(--text));
-  /* neon ring to match the badge — reads like a time-limited CTA */
+  /* static neon ring to match the badge — reads like a time-limited CTA */
   box-shadow: var(--glow-pill);
-  --ring: var(--accent-rgb);
-  --ring-a: 0.55;
+  /* hover glow reused from the button system. NOTE: the .promo fill is translucent ON PURPOSE, so
+     the drop-shadow deliberately bleeds THROUGH it — a flaky-neon-sign look. Don't "fix" it; it
+     reads a touch off and that's the point (see the /styleguide note). */
+  --glow-rgb: var(--accent-rgb);
+  --glow-a: 0.55;
+  --glow-blur: 10px;
+  filter: drop-shadow(0 0 0 rgba(var(--glow-rgb), 0));
+  transition: background 140ms ease, filter 1s ease-in;
 }
 .promo:hover {
   text-decoration: none;
   background: color-mix(in srgb, var(--accent) 16%, transparent);
-}
-/* radiate on hover, same as buttons */
-.promo::before,
-.promo::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  z-index: -1;
-  opacity: 0;
-  pointer-events: none;
-}
-.promo:hover::before {
-  animation: radiate 6s ease-out infinite;
-}
-.promo:hover::after {
-  animation: radiate 6s ease-out infinite 3s;
+  filter: drop-shadow(0 0 var(--glow-blur) rgba(var(--glow-rgb), var(--glow-a)));
+  transition: background 140ms ease, filter 0.3s ease;
 }
 .promo .pdot {
   width: 7px;
@@ -798,13 +737,13 @@ table.table {
     opacity: 1;
     text-shadow: var(--lit);
   }
-  button.radiate:hover::before,
-  button.radiate:hover::after,
-  .button.radiate:hover::before,
-  .button.radiate:hover::after,
-  .promo:hover::before,
-  .promo:hover::after {
-    animation: none;
+  /* keep the hover glow, drop its fade. Must include the :hover selectors — they outrank a bare
+     .button/.promo, and this block is later in source order, so it wins at equal specificity. */
+  .button,
+  .button:not(:disabled):hover,
+  .promo,
+  .promo:hover {
+    transition: background 140ms ease;
   }
 }
 
