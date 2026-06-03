@@ -5,6 +5,15 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-03
+
+### Added
+- **Worker types drift guard.** CI now regenerates `worker-configuration.d.ts`
+  (`npm run generate-types`) and fails if the committed copy is stale — part of the
+  `Required checks` gate. A wrangler bump ships a newer workerd and silently leaves the
+  checked-in types behind (Dependabot won't regenerate them); this catches that on the
+  bump's own PR instead of letting it surface later on an unrelated change.
+
 ## 2026-06-01
 
 ### Added

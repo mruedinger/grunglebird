@@ -21,6 +21,15 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      # Fail if the committed Worker types drifted from what `wrangler types`
+      # produces (e.g. a wrangler bump that ships a newer workerd). Dependabot
+      # won't regenerate them, so this guard catches the staleness here instead
+      # of letting it surface on an unrelated PR.
+      - name: Worker types in sync
+        run: |
+          npm run generate-types
+          git diff --exit-code worker-configuration.d.ts \
+            || { echo "::error::worker-configuration.d.ts is stale — run 'npm run generate-types' and commit the result."; exit 1; }
       - run: npm run lint:styles
       - run: npm run check
       - run: npm run build
