@@ -334,7 +334,7 @@ a:hover {
   border: 1px solid var(--accent);
 }
 .button.danger:not(:disabled):hover {
-  background: var(--accent);
+  background: var(--accent-hover);
   color: var(--on-accent);
 }
 /* compact size — shared, so admin actions / utility buttons stay consistent */
