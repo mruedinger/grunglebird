@@ -33,21 +33,21 @@ const authed = await getSession(Astro.request, env as AuthEnv);
           </table>
         </div>
         <div class="admin-actions">
-          <button id="add-passkey" class="ghost sm">Add a passkey to this account</button>
-          <button id="logout" class="ghost sm">Log out</button>
+          <button id="add-passkey" class="button ghost sm">Add a passkey to this account</button>
+          <button id="logout" class="button ghost sm">Log out</button>
         </div>
       </>
     ) : (
       <section id="signin" class="signin">
         <h1>Admin sign-in</h1>
         <p class="muted">Sign in with your passkey to manage pledges.</p>
-        <button id="signin-btn">Sign in with passkey</button>
+        <button id="signin-btn" class="button">Sign in with passkey</button>
         <p class="signin-msg muted" id="signin-msg"></p>
         <details class="recovery">
           <summary>Use a recovery code</summary>
           <form id="recovery-form">
             <input type="text" id="recovery-code" placeholder="Recovery code" autocomplete="off" />
-            <button type="submit">Sign in</button>
+            <button type="submit" class="button">Sign in</button>
           </form>
         </details>
       </section>
@@ -163,7 +163,7 @@ const authed = await getSession(Astro.request, env as AuthEnv);
             <td>@${escapeHtml(p.venmo_handle.replace(/^@+/, ''))}</td>
             <td>${p.is_private ? 'yes' : 'no'}</td>
             <td><label><input type="checkbox" data-id="${p.id}" class="paid-toggle" ${p.is_paid ? 'checked' : ''}/></label></td>
-            <td><button data-id="${p.id}" class="del danger sm">Delete</button></td>
+            <td><button data-id="${p.id}" class="del button danger sm">Delete</button></td>
           `;
           tbody.appendChild(tr);
         }

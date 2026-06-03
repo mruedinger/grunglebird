@@ -75,8 +75,8 @@ import PromoPill from "../components/PromoPill.astro";
       <p class="sg-note">
         Default <code>:root</code> values; a <code>[data-theme]</code> reassigns the
         same names to retint. <code>--accent-rgb 255,54,43</code> and
-        <code>--focus-rgb 248,238,234</code> are rgb triplets that drive glows,
-        radiate rings, and the focus ring. <code>--control-border</code> is the
+        <code>--focus-rgb 248,238,234</code> are rgb triplets that drive the
+        button/promo hover glow and the focus ring. <code>--control-border</code> is the
         resting input edge (kept dim by default, bumped under
         <code>prefers-contrast: more</code>); <code>--hair</code> stays faint for dividers.
       </p>
@@ -128,18 +128,34 @@ import PromoPill from "../components/PromoPill.astro";
 
     <section class="sg-section">
       <p class="sg-label">Buttons</p>
-      <p class="sg-note">Hover a button to see its radiate rings (motion is CSS-only, reduced-motion safe).</p>
+      <p class="sg-note">Matte at rest; hover blooms a single drop-shadow that fades back out slowly (CSS-only, reduced-motion safe). Disabled stays static.</p>
       <div class="sg-row">
-        <button>Primary</button>
-        <button class="ghost">Ghost</button>
-        <button class="danger">Delete</button>
-        <button disabled>Disabled</button>
-        <button class="sm">Small</button>
-        <button class="ghost sm">Small ghost</button>
+        <button class="button">Primary</button>
+        <button class="button ghost">Ghost</button>
+        <button class="button danger">Delete</button>
+        <button class="button" disabled>Disabled</button>
+        <button class="button sm">Small</button>
+        <button class="button ghost sm">Small ghost</button>
       </div>
-      <div class="sg-row" style="margin-top: var(--space-md)">
-        <button class="radiate">Primary · radiate</button>
-        <button class="ghost radiate">Ghost · radiate</button>
+    </section>
+
+    <section class="sg-section">
+      <p class="sg-label">Modal</p>
+      <p class="sg-note">Appearance only — open/close behavior lands with a feature that needs it. Parked next to Buttons on purpose: its ghost + danger actions sit on a <code>--surface</code> panel, so the opaque fills can be eyeballed against a card, not just the page.</p>
+      <div class="sg-modal-stage">
+        <div class="modal-scrim sg-modal-scrim">
+          <div class="modal">
+            <div class="modal-head">
+              <h3 class="modal-title">Delete this pledge?</h3>
+              <button class="modal-close" aria-label="Close">✕</button>
+            </div>
+            <p class="modal-body">This can't be undone. The pledge will be removed from the event tally.</p>
+            <div class="modal-actions">
+              <button class="button ghost">Cancel</button>
+              <button class="button danger">Delete</button>
+            </div>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -153,7 +169,7 @@ import PromoPill from "../components/PromoPill.astro";
 
     <section class="sg-section">
       <p class="sg-label">Promo capsule</p>
-      <p class="sg-note">The accent-tinted "what's on" slot (the <code>PromoPill</code> component) — points at the current event on the home and events pages.</p>
+      <p class="sg-note">The accent-tinted "what's on" slot (the <code>PromoPill</code> component) — points at the current event on the home and events pages. On hover its glow deliberately bleeds <em>through</em> the translucent fill — a flaky-neon-sign look that's intentional, not a bug to fix.</p>
       <div class="sg-row">
         <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar — pledge the bar" />
       </div>
@@ -225,7 +241,7 @@ import PromoPill from "../components/PromoPill.astro";
         </div>
         <div class="search-btn">
           <input type="text" placeholder="Smith &amp; Cross…" aria-label="Spirit to find" />
-          <button class="radiate">Find</button>
+          <button class="button">Find</button>
         </div>
       </div>
     </section>
@@ -238,31 +254,11 @@ import PromoPill from "../components/PromoPill.astro";
             <tr><th>Date</th><th>Name</th><th>Amount</th><th></th></tr>
           </thead>
           <tbody>
-            <tr><td>May 24</td><td>Avery</td><td class="amt">$24.00</td><td><button class="danger sm">Delete</button></td></tr>
-            <tr class="paid"><td>May 22</td><td>Jordan</td><td class="amt">$40.00</td><td><button class="danger sm">Delete</button></td></tr>
-            <tr><td>May 20</td><td>Sam</td><td class="amt">$12.00</td><td><button class="danger sm">Delete</button></td></tr>
+            <tr><td>May 24</td><td>Avery</td><td class="amt">$24.00</td><td><button class="button danger sm">Delete</button></td></tr>
+            <tr class="paid"><td>May 22</td><td>Jordan</td><td class="amt">$40.00</td><td><button class="button danger sm">Delete</button></td></tr>
+            <tr><td>May 20</td><td>Sam</td><td class="amt">$12.00</td><td><button class="button danger sm">Delete</button></td></tr>
           </tbody>
         </table>
-      </div>
-    </section>
-
-    <section class="sg-section">
-      <p class="sg-label">Modal</p>
-      <p class="sg-note">Appearance only — open/close behavior lands with a feature that needs it.</p>
-      <div class="sg-modal-stage">
-        <div class="modal-scrim sg-modal-scrim">
-          <div class="modal">
-            <div class="modal-head">
-              <h3 class="modal-title">Delete this pledge?</h3>
-              <button class="modal-close" aria-label="Close">✕</button>
-            </div>
-            <p class="modal-body">This can't be undone. The pledge will be removed from the event tally.</p>
-            <div class="modal-actions">
-              <button class="ghost">Cancel</button>
-              <button class="danger">Delete</button>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
 
