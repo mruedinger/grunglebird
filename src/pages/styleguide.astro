@@ -22,7 +22,7 @@ import PromoPill from "../components/PromoPill.astro";
 
     <!-- ============ TOKENS ============ -->
     <section class="sg-section">
-      <p class="sg-label">Type scale — Restrained</p>
+      <p class="eyebrow">Type scale — Restrained</p>
       <p class="sg-note">
         Bricolage Grotesque for display; Inter for body. The hero is weight 700,
         other headings 600. <code>--text-2xl</code> / <code>--text-3xl</code> are
@@ -41,7 +41,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Spacing — 4px rhythm</p>
+      <p class="eyebrow">Spacing — 4px rhythm</p>
       <p class="sg-note">The shared rhythm for gaps, padding, and margins.</p>
       <div>
         <div class="sg-spacing-row"><span class="sg-tok">--space-2xs · 4</span><span class="bar bar-2xs"></span></div>
@@ -56,7 +56,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Radii &amp; sizing</p>
+      <p class="eyebrow">Radii &amp; sizing</p>
       <p class="sg-note">
         Widths: <code>--shell-max 1100</code>, <code>--container 720</code>,
         <code>--container-narrow 32rem</code>, <code>--measure 65ch</code> (this copy
@@ -71,7 +71,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Palette — Dive Bar</p>
+      <p class="eyebrow">Palette — Dive Bar</p>
       <p class="sg-note">
         Default <code>:root</code> values; a <code>[data-theme]</code> reassigns the
         same names to retint. <code>--accent-rgb 255,54,43</code> and
@@ -100,7 +100,7 @@ import PromoPill from "../components/PromoPill.astro";
 
     <!-- ============ PRIMITIVES ============ -->
     <section class="sg-section">
-      <p class="sg-label">Headings, subhead &amp; copy</p>
+      <p class="eyebrow">Headings, subhead &amp; copy</p>
       <div class="sg-stack">
         <h1>Heading 1</h1>
         <h2>Heading 2 — section</h2>
@@ -118,7 +118,30 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Hero — neon</p>
+      <p class="eyebrow">Eyebrow &amp; inline code</p>
+      <p class="sg-note">
+        Two jobs from the one scarlet family. The <em>eyebrow</em> is a flat section kicker in
+        the deeper <code>--accent</code> — every label on this page is one. Inline
+        <code>code</code> is mono in the lighter <code>--accent-legible</code>, no chip. They
+        share the hue but read as different roles, not two reds by accident.
+      </p>
+      <div class="sg-stack">
+        <div>
+          <p class="eyebrow">Now pouring</p>
+          <h3>An eyebrow marks the thing under it</h3>
+        </div>
+        <div class="copy">
+          <p>
+            Inline <code>code</code> sits in prose: tokens like <code>--font-mono</code>, paths
+            like <code>src/styles/global.css</code>, commands like
+            <code>npm run lint:styles</code>.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <section class="sg-section">
+      <p class="eyebrow">Hero — neon</p>
       <p class="sg-note">
         The lit-tube wordmark: flickers to life on load and ~once a minute (held lit
         under reduced-motion).
@@ -127,7 +150,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Buttons</p>
+      <p class="eyebrow">Buttons</p>
       <p class="sg-note">Matte at rest; hover blooms a single drop-shadow that fades back out slowly (CSS-only, reduced-motion safe). Disabled stays static.</p>
       <div class="sg-row">
         <button class="button">Primary</button>
@@ -140,7 +163,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Modal</p>
+      <p class="eyebrow">Modal</p>
       <p class="sg-note">Appearance only — open/close behavior lands with a feature that needs it. Parked next to Buttons on purpose: its ghost + danger actions sit on a <code>--surface</code> panel, so the opaque fills can be eyeballed against a card, not just the page.</p>
       <div class="sg-modal-stage">
         <div class="modal-scrim sg-modal-scrim">
@@ -160,7 +183,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Badge</p>
+      <p class="eyebrow">Badge</p>
       <div class="sg-row">
         <span class="badge">Coming soon</span>
         <span class="badge">New</span>
@@ -168,7 +191,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Promo capsule</p>
+      <p class="eyebrow">Promo capsule</p>
       <p class="sg-note">The accent-tinted "what's on" slot (the <code>PromoPill</code> component) — points at the current event on the home and events pages. On hover its glow deliberately bleeds <em>through</em> the translucent fill — a flaky-neon-sign look that's intentional, not a bug to fix.</p>
       <div class="sg-row">
         <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar — pledge the bar" />
@@ -176,7 +199,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Cards</p>
+      <p class="eyebrow">Cards</p>
       <div class="sg-grid">
         <div class="card">
           <h3>Card title</h3>
@@ -190,7 +213,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Inputs &amp; states</p>
+      <p class="eyebrow">Inputs &amp; states</p>
       <p class="sg-note">
         Fields read as "wells" (a touch darker than the card). Focus is a warm
         near-white ring — click a field to see it; scarlet is reserved for errors.
@@ -230,7 +253,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Search</p>
+      <p class="eyebrow">Search</p>
       <p class="sg-note">Leading-magnifier for filter-as-you-type; input + button for a fired query.</p>
       <div class="sg-grid">
         <div class="search-ic">
@@ -247,7 +270,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Table</p>
+      <p class="eyebrow">Table</p>
       <div class="table-frame">
         <table class="table">
           <thead>
@@ -263,7 +286,7 @@ import PromoPill from "../components/PromoPill.astro";
     </section>
 
     <section class="sg-section">
-      <p class="sg-label">Alert / callout</p>
+      <p class="eyebrow">Alert / callout</p>
       <div class="sg-stack">
         <div class="alert">
           <span class="alert-icon">i</span>
@@ -293,13 +316,6 @@ import PromoPill from "../components/PromoPill.astro";
     }
     .sg-section {
       margin-top: var(--space-3xl);
-    }
-    .sg-label {
-      font-size: var(--text-xs);
-      letter-spacing: 0.18em;
-      text-transform: uppercase;
-      color: var(--accent);
-      margin: 0 0 var(--space-xs);
     }
     .sg-note {
       color: var(--muted);
@@ -341,10 +357,6 @@ import PromoPill from "../components/PromoPill.astro";
       font-family: var(--font-body);
       font-size: var(--text-sm);
       color: var(--muted);
-    }
-    code {
-      font-size: 0.92em;
-      color: var(--accent-legible);
     }
 
     /* type specimens */
