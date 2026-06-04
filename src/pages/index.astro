@@ -1,41 +1,112 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import PromoPill from "../components/PromoPill.astro";
+
+const grungleBird = [
+  { amount: "1 oz", ingredient: "Planteray OFTD" },
+  { amount: "½ oz", ingredient: "Smith & Cross" },
+  { amount: "¾ oz", ingredient: "Campari" },
+  { amount: "½ oz", ingredient: "Demerara syrup" },
+  { amount: "1 oz", ingredient: "Lime juice" },
+  { amount: "1½ oz", ingredient: "Grapefruit juice" },
+  { amount: "2 dash", ingredient: "Angostura bitters" },
+];
 ---
 
 <Layout title="grunglebird" description="Mike's corner of the web for cocktail craft.">
   <main class="container home">
-    <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar" />
+    <div class="center pill-row">
+      <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar" />
+    </div>
 
-    <section class="feature">
-      <h2>Grungle Bird</h2>
-      <p class="desc">
-        Mike's riff on the Jungle Bird<br />funky, citrusy, bittersweet
-      </p>
-      <a class="feature-link" href="/cocktails">See the recipe →</a>
-    </section>
+    <h1 class="hero">Grungle Bird</h1>
+    <p class="subhead">what is this place…</p>
+    <p class="copy">
+      Down a flight of stairs you didn't notice, past a door that shouldn't open,
+      there's a bar. The lights are low. The ice is good.
+    </p>
+
+    <article class="card recipe-card">
+      <h2 class="recipe-name">Grungle Bird</h2>
+      <p class="recipe-micro">matches the shirt</p>
+      <ul>
+        {
+          grungleBird.map((row) => (
+            <li>
+              <span class="amt">{row.amount}</span>
+              <span class="ing">{row.ingredient}</span>
+            </li>
+          ))
+        }
+      </ul>
+      <div class="recipe-notes">
+        <p>Pebble ice. Shake. Open pour.</p>
+        <p>funky, juicy, bittersweet</p>
+        <p class="recipe-aside">they say Mike made this himself</p>
+      </div>
+    </article>
   </main>
 
   <style>
-    .home .feature {
-      margin-top: var(--space-2xl);
+    .pill-row {
+      margin-bottom: var(--space-2xl);
     }
-    .feature h2 {
-      font-size: var(--text-xl);
-      margin: 0 0 var(--space-xs);
+    .home .copy {
+      margin-bottom: var(--space-2xl);
     }
-    .feature .desc {
-      color: var(--muted);
-      max-width: 42ch; /* copy measure — line length has no scale step */
+
+    /* recipe card: hangs on the left rail, contents centered within it.
+       Surface/border/radius/padding all come from the shared .card. */
+    .recipe-card {
+      max-width: 340px; /* recipe column width — layout one-off, no sizing token */
       margin: 0;
-      line-height: 1.6;
+      text-align: center;
     }
-    .feature-link {
-      display: inline-block;
-      margin-top: var(--space-md);
-      color: var(--accent);
-      font-weight: 500;
+    .recipe-name {
+      margin: 0 0 var(--space-2xs);
+    }
+    .recipe-micro {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      margin: 0 0 var(--space-sm);
+    }
+    .recipe-card ul {
+      list-style: none;
+      padding: var(--space-sm) 0 0;
+      margin: 0;
+      border-top: 1px solid var(--hair);
+      text-align: left; /* keep the amount / ingredient columns aligned */
+    }
+    .recipe-card li {
+      display: flex;
+      gap: var(--space-sm);
+      padding: var(--space-2xs) 0;
       font-size: var(--text-base);
+    }
+    .recipe-card .amt {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      width: 56px; /* fixed amount column — layout one-off */
+      text-align: right;
+      flex: 0 0 auto;
+    }
+    .recipe-card .ing {
+      color: var(--text);
+    }
+    .recipe-notes {
+      margin-top: var(--space-sm);
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2xs);
+    }
+    .recipe-notes p {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+      margin: 0;
+    }
+    .recipe-notes .recipe-aside {
+      font-style: italic;
     }
   </style>
 </Layout>
