@@ -41,7 +41,7 @@ const grungleBird = [
       </ul>
       <div class="recipe-notes">
         <p>Pebble ice. Shake. Open pour.</p>
-        <p>funky, juicy, bittersweet</p>
+        <p class="recipe-sep" aria-hidden="true">⁂</p>
         <p class="recipe-aside">they say Mike made this himself</p>
       </div>
     </article>
@@ -59,7 +59,7 @@ const grungleBird = [
        Surface/border/radius/padding all come from the shared .card. */
     .recipe-card {
       max-width: 340px; /* recipe column width — layout one-off, no sizing token */
-      margin: 0;
+      margin: 0 auto; /* centered island; the prose above stays on the left rail */
       text-align: center;
     }
     .recipe-name {
@@ -68,13 +68,15 @@ const grungleBird = [
     .recipe-micro {
       color: var(--muted);
       font-size: var(--text-sm);
+      font-style: italic;
       margin: 0 0 var(--space-sm);
     }
     .recipe-card ul {
       list-style: none;
-      padding: var(--space-sm) 0 0;
+      padding: var(--space-sm) 0;
       margin: 0;
       border-top: 1px solid var(--hair);
+      border-bottom: 1px solid var(--hair);
       text-align: left; /* keep the amount / ingredient columns aligned */
     }
     .recipe-card li {
@@ -97,7 +99,7 @@ const grungleBird = [
       margin-top: var(--space-sm);
       display: flex;
       flex-direction: column;
-      gap: var(--space-2xs);
+      gap: var(--space-xs);
     }
     .recipe-notes p {
       color: var(--muted);
