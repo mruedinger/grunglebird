@@ -37,17 +37,19 @@ const grungleBird = [
     /* layout only — surface/border/radius/padding come from the shared .card */
     .recipe-card {
       max-width: 340px; /* recipe column width — layout one-off, no sizing token */
-      margin: 0;
+      margin: 0 auto;
       text-align: left;
     }
     .recipe-card h3 {
       font-size: var(--text-lg);
       margin: 0 0 var(--space-2xs);
+      text-align: center;
     }
     .recipe-desc {
       color: var(--muted);
       font-size: var(--text-sm);
       line-height: 1.5;
+      text-align: center;
       margin: 0 0 var(--space-sm);
     }
     .recipe-card ul {
@@ -77,6 +79,7 @@ const grungleBird = [
       color: var(--muted);
       font-style: italic;
       font-size: var(--text-sm);
+      text-align: center;
     }
   </style>
 </Layout>
