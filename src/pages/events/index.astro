@@ -5,7 +5,17 @@ import PromoPill from "../../components/PromoPill.astro";
 
 <Layout title="Events — grunglebird" description="Upcoming and past events." active="events">
   <main class="container">
+    <div class="center pill-row">
+      <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar" />
+    </div>
+
     <h1 class="hero">Events</h1>
-    <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar" />
+    <p class="copy muted">getting there…</p>
   </main>
+
+  <style>
+    .pill-row {
+      margin-bottom: var(--space-2xl);
+    }
+  </style>
 </Layout>
