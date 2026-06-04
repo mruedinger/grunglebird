@@ -19,17 +19,31 @@
 // contains it (the trailing `(?![\w-])` lets `.recipe-card` / `.card-head` through).
 const tokenClass = (name) => new RegExp(`\\.${name}(?![\\w-])`);
 
+// Family regexes: match a primitive's root AND every `-`-suffixed member — `.modal`,
+// `.modal-head`, `.modal-scrim` are all the one primitive, so re-declaring any part is
+// re-declaring it. The boundary `(?![A-Za-z0-9_])` lets the hyphen through but keeps an
+// accidental longer word out (`.modalish`, `.modal_body`) and only fires on a literal
+// `.<name>` start (so `.sg-modal-scrim` is fine). Used where global.css defines a whole
+// class family rather than a single class.
+const familyClass = (name) => new RegExp(`\\.${name}(?![A-Za-z0-9_])`);
+
 // Shared VISUAL-COMPONENT + SHELL class primitives whose look must be identical on every
 // page. Pages compose these from markup and add their own page-specific layout classes;
 // they never re-declare them locally. Deliberately NOT listed: single-purpose layout/
 // utility helpers (.container .center .page-title .muted .field) and bare element
-// selectors (button, input, h2) — pages legitimately scope/extend those for layout.
+// selectors (button, input, h2, code) — pages legitimately scope/extend those for layout.
 const SHARED_PRIMITIVES = [
-  // components
-  "card", "button", "ghost", "sm", "danger", "badge", "promo", "pdot", "arr",
+  // exact single-class components (a longer name that merely contains one stays legal)
+  ...["card", "button", "ghost", "sm", "danger", "badge", "promo", "pdot", "arr",
+    "select-wrap", "eyebrow"].map(tokenClass),
+  // multi-class component families (root + every `-`-suffixed member)
+  ...["table", "modal", "alert"].map(familyClass),
+  // search: only `.search-*` members exist (no bare `.search` root), so match the prefix
+  /\.search-/,
   // shell (header / nav / footer)
-  "site-header", "shell-bar", "brand", "nav", "admin-dot", "site-footer", "footer-note",
-].map(tokenClass);
+  ...["site-header", "shell-bar", "brand", "nav", "admin-dot", "site-footer", "footer-note"]
+    .map(tokenClass),
+];
 
 const rules = {
   // 1 — no hardcoded colors; tokens (var(--…)) and color-mix(…var…) stay legal.
