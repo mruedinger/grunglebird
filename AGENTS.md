@@ -15,10 +15,11 @@ Design for usability and responsiveness.
 Hosted on Cloudflare Workers; prefer solutions that fit that runtime.
 
 ## Styling
-One stylesheet, one set of design tokens — the single source of truth for color, type, spacing, sizing, headings, buttons, inputs, and every shared primitive. Pages MUST consume these; never redefine shared primitives locally or hardcode their values — a button or heading looks identical on every page. Page-specific layout is fine if built from the shared tokens/scale.
+One stylesheet, one set of design tokens — the single source of truth for color, type, spacing, sizing, headings, buttons, inputs, and every shared primitive. Pages MUST consume these; never redefine shared primitives locally or hardcode their values — a button or heading looks identical on every page.
+A page owns *where things go* (layout: grids, widths, arrangement); the system owns *what shared things look like* (the type/spacing/radius scale + every primitive). Page-specific layout built from the shared tokens/scale is fine; restyling a shared element or hardcoding an off-scale dimension is not. Need a shared element the system lacks? Define it in `global.css`, render it on `/styleguide`, and surface it in the PR for approval — don't hack a local one.
 The shell (nav + footer + layout chrome) is constant everywhere — same structure and typography on every page; only its color retints per event via token overrides.
 Event pages (`/events/<event>`) are the one exception: within the page body they may use bespoke fonts and non-standard elements — a poster for the event. Every other page sticks strictly to the shared system.
-Enforced automatically by `npm run lint:styles` (a CI required check): no hardcoded colors, no re-declaring shared primitives; posters are exempt. See [`docs/styling.md`](docs/styling.md) for what's checked and how to override.
+Enforced automatically by `npm run lint:styles` (a CI required check): no hardcoded colors or off-scale dimensions, no re-declaring shared primitives; posters are exempt. See [`docs/styling.md`](docs/styling.md) for what's checked and how to override.
 
 ## Voice
 grunglebird's personality lives in **microcopy**, not chrome. Actively look for spots — footers, empty states, errors, confirmations, stubs; admin-only corners count too.

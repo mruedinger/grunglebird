@@ -1,11 +1,14 @@
 /*
- * grunglebird — styling guardrail (issue #13).
+ * grunglebird — styling guardrail (issues #13, #38).
  *
  * A deterministic safety net around the AGENTS.md styling rule. It catches, before
- * merge, the two drift modes seen during the #9 redesign:
- *   1. hardcoded color literals outside the token stylesheet, and
- *   2. local re-declaration of a shared visual-component / shell primitive.
- * It does NOT change the styling rule or expand the token system (both #13 non-goals).
+ * merge, the drift modes seen during the #9 redesign:
+ *   1. hardcoded color literals outside the token stylesheet,
+ *   2. local re-declaration of a shared visual-component / shell primitive, and
+ *   3. hardcoded token-able DIMENSIONS — off-scale font-size / spacing / radius (#38),
+ *      so a page can't reintroduce an off-scale value the migration removed.
+ * It does NOT define the scale (that's global.css) or enforce true layout (widths, grid
+ * gaps) — those stay on the docs/styling.md review checklist.
  * See docs/styling.md for what's enforced, how to satisfy it, and how to override.
  *
  * Scope: Astro <style> blocks (parsed via postcss-html). global.css is the source of
@@ -45,6 +48,13 @@ const SHARED_PRIMITIVES = [
     .map(tokenClass),
 ];
 
+// A raw length literal (px/rem, plus em for the type scale) appearing anywhere in a value.
+// Case-insensitive. The (?<![\w-]) lookbehind means a digit inside a token name never matches
+// (var(--space-2xl), var(--radius-md) stay legal); [+-]? catches -0.5rem / +12px while
+// calc(… var …), 0 (unitless), 100%, and translateY(-50%) all stay legal.
+const rawDim = /(?<![\w-])[+-]?(?:\d*\.)?\d+(?:px|rem)\b/i;
+const rawFontDim = /(?<![\w-])[+-]?(?:\d*\.)?\d+(?:px|rem|em)\b/i; // +em closes the type-scale dodge
+
 const rules = {
   // 1 — no hardcoded colors; tokens (var(--…)) and color-mix(…var…) stay legal.
   "color-no-hex": true,
@@ -59,6 +69,26 @@ const rules = {
         "a page-specific layout class instead (see docs/styling.md).",
     },
   ],
+  // 3 — no hardcoded token-able dimensions (#38). Property keys are anchored regexes that catch
+  // the shorthand AND every longhand (incl. logical margin-block / border-start-start-radius)
+  // without snagging scroll-margin/scroll-padding. Only the appearance scale steps — font-size,
+  // spacing (margin/padding), radius — are enforced; gap, widths and heights are true layout and
+  // stay on the review checklist (see docs/styling.md).
+  "declaration-property-value-disallowed-list": [
+    {
+      // /i because CSS property names are case-insensitive (`Font-Size` must not slip past).
+      // `font` (the shorthand) is keyed too, so a size can't dodge in via `font: 17px …`.
+      "/^font$/i": [rawFontDim],
+      "/^font-size$/i": [rawFontDim],
+      "/^(?:margin|padding)(?:-|$)/i": [rawDim],
+      "/^border(?:-[a-z]+)*-radius$/i": [rawDim],
+    },
+    {
+      message:
+        "Use a scale token (var(--text-*) / var(--space-*) / var(--radius-*)), not a raw " +
+        "px/rem/em. Deliberate one-off? stylelint-disable … -- reason (see docs/styling.md).",
+    },
+  ],
 };
 
 // The same rule set, switched off — for the exempt event poster pages.
@@ -68,6 +98,9 @@ export default {
   // The token stylesheet defines the literals and primitives; never lint it. (Narrow on
   // purpose: a future second stylesheet under src/styles/ stays guarded.)
   ignoreFiles: ["src/styles/global.css"],
+  // The escape hatch must carry a reason: a `stylelint-disable … -- reason` is allowed, a bare
+  // one is an error. So every deliberate one-off is explained inline and shows up in the diff.
+  reportDescriptionlessDisables: true,
   rules,
   overrides: [
     // Parse Astro <style> blocks.
