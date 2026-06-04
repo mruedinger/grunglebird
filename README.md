@@ -20,7 +20,6 @@ primitives are catalogued live on [`/styleguide`](https://grunglebird.com/styleg
 | `/tools` | Bar utilities — spirit finder (coming soon); a permanent bucket for more tools | yes |
 | `/events` | Index of events; points at the current one | yes |
 | `/events/framily-beach-bar-2026` | Mike's Beach Bar — the event page with its pledge form, beach-themed | via `/events` + home |
-| `/juice` | Superjuice (pseudo-citrus) calculators — parked utility, not in nav | no |
 | `/styleguide` | Living registry — every design token + shared primitive on one page | no |
 | `/admin` | Admin sign-in / pledge management — the permanent sign-in escape hatch | affordance shown only when signed in |
 
@@ -63,16 +62,16 @@ npm run preview            # astro build + astro preview on workerd
 
 ## Continuous integration
 
-Every pull request targeting `main` runs `astro check` + `astro build` via GitHub
-Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)). Both roll up into a
-single required status check, **Required checks**, that branch protection requires
-before a PR can merge — a failing check or build blocks the merge. Since `main`
-auto-deploys to production, this is the safety net between a PR and prod.
+Every pull request targeting `main` runs `npm run lint:styles`, `astro check`, and
+`astro build` via GitHub Actions ([`.github/workflows/ci.yml`](.github/workflows/ci.yml)).
+These roll up into a single required status check, **Required checks**, that branch
+protection requires before a PR can merge — a failing check or build blocks the merge.
+Since `main` auto-deploys to production, this is the safety net between a PR and prod.
 
 Direct pushes to `main` stay allowed for trivial edits (admins bypass the check); the
-requirement applies to PR merges only. To add a future check (a style lint, tests),
-add a step to the `ci` job — or a sibling job listed in the gate's `needs` — and
-branch protection needs no change.
+requirement applies to PR merges only. To add a future check (tests, say), add a step to
+the `ci` job — or a sibling job listed in the gate's `needs` — and branch protection
+needs no change.
 
 ## First-time deploy
 
@@ -179,7 +178,6 @@ a new one is generated the next time you register a passkey while none is stored
 │       ├── index.astro         # home / about
 │       ├── cocktails.astro     # recipe library (Grungle Bird card)
 │       ├── tools.astro         # spirit finder (coming soon)
-│       ├── juice.astro         # superjuice calculators (not in nav)
 │       ├── events/
 │       │   ├── index.astro     # events index
 │       │   └── framily-beach-bar-2026.astro  # Mike's Beach Bar event page — pledge form (beach-themed)

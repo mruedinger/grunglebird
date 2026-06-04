@@ -13,6 +13,17 @@ are intentionally left out to keep this readable.
   `Required checks` gate. A wrangler bump ships a newer workerd and silently leaves the
   checked-in types behind (Dependabot won't regenerate them); this catches that on the
   bump's own PR instead of letting it surface later on an unrelated change.
+- **Off-scale dimensions now fail CI.** `npm run lint:styles` rejects a hardcoded
+  `px`/`rem` (or `em` on `font-size`) for `font-size`, `margin`, `padding`, and
+  `border-radius` on standard pages — so a page can't reintroduce an off-scale value the
+  design system already has a scale step for. `gap`, widths, and heights stay on the
+  review checklist. A deliberate one-off needs a reasoned `stylelint-disable … -- reason`
+  (bare disables now error), so every exception lands in the diff. This closes epic #34's
+  enforcement step. (#38)
+
+### Removed
+- **`/juice` superjuice calculator.** The parked, unlinked pseudo-citrus calculator is
+  retired (long marked for removal); its raw dimensions were the last off-scale holdout. (#38)
 
 ## 2026-06-01
 
