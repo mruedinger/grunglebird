@@ -9,27 +9,23 @@ import Layout from "../layouts/Layout.astro";
 >
   <main class="container">
     <h1 class="hero">Tools</h1>
+    <p class="copy muted">We have to find them first…</p>
 
-    <div class="soon">
-      <span class="badge">Coming soon</span>
+    <div class="section-head">
       <h2>Spirit finder</h2>
-      <p>Search store inventories for the bottle you're hunting.</p>
+      <span class="badge">Coming soon</span>
     </div>
   </main>
 
   <style>
-    .soon {
+    .section-head {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
       margin-top: var(--space-xl);
     }
-    .soon h2 {
-      font-size: var(--text-xl);
-      margin: var(--space-sm) 0 var(--space-2xs);
-    }
-    .soon p {
-      color: var(--muted);
-      max-width: 40ch; /* copy measure — line length has no scale step */
+    .section-head h2 {
       margin: 0;
-      line-height: 1.55;
     }
   </style>
 </Layout>
