@@ -22,8 +22,12 @@ available locally any time. It runs two complementary checks:
      literals. Use a token: `var(--accent)`, or `color-mix(in srgb, var(--accent) …)`.
    - **No re-declaring a shared primitive** — the visual-component / shell classes
      (`.card`, `.button` + `.ghost`/`.sm`/`.danger`, `.badge`, `.promo`/`.pdot`/`.arr`,
-     and the shell: `.site-header`, `.shell-bar`, `.brand`, `.nav`, `.admin-dot`,
-     `.site-footer`, `.footer-note`) must not be targeted in a page `<style>` block.
+     `.select-wrap`, `.eyebrow`, the `.table`/`.modal`/`.alert` families — root and any
+     `-`-suffixed member, e.g. `.modal-head` — and `.search-*`; plus the shell:
+     `.site-header`, `.shell-bar`, `.brand`, `.nav`, `.admin-dot`, `.site-footer`,
+     `.footer-note`) must not be targeted in a page `<style>` block. Bare element
+     selectors (`button`, `input`, `code`, …) are *not* on this list — pages may scope or
+     extend those for layout.
 2. **Inline/SVG color scan** ([`scripts/lint-inline-colors.mjs`](../scripts/lint-inline-colors.mjs)) —
    catches color literals in `style=` / `fill=` / `stroke=` / `stop-color=` attributes,
    which Stylelint can't see for the SVG cases.
