@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import PromoPill from "../components/PromoPill.astro";
 
 // The living registry for issue #36: every design token and shared primitive
 // rendered on one page. Public but intentionally NOT linked from the nav — it's a
@@ -11,7 +10,7 @@ import PromoPill from "../components/PromoPill.astro";
 <Layout title="grunglebird — styleguide" description="Design tokens and shared primitives.">
   <main class="sg-wrap">
     <h1 class="hero">Styleguide</h1>
-    <p class="subhead">Every token and shared primitive, from one source of truth.</p>
+    <p class="subhead">Every token and shared primitive, straight from the bird's beak.</p>
     <div class="copy">
       <p class="muted">
         This page is the registry: the type / spacing / sizing / radius scales and
@@ -122,8 +121,7 @@ import PromoPill from "../components/PromoPill.astro";
       <p class="sg-note">
         Two jobs from the one scarlet family. The <em>eyebrow</em> is a flat section kicker in
         the deeper <code>--accent</code> — every label on this page is one. Inline
-        <code>code</code> is mono in the lighter <code>--accent-legible</code>, no chip. They
-        share the hue but read as different roles, not two reds by accident.
+        <code>code</code> is mono in the lighter <code>--accent-legible</code>, no chip.
       </p>
       <div class="sg-stack">
         <div>
@@ -146,7 +144,7 @@ import PromoPill from "../components/PromoPill.astro";
         The lit-tube wordmark: flickers to life on load and ~once a minute (held lit
         under reduced-motion).
       </p>
-      <h1 class="hero">Grunglebird</h1>
+      <h1 class="hero">Grungle Bird</h1>
     </section>
 
     <section class="sg-section">
@@ -172,7 +170,7 @@ import PromoPill from "../components/PromoPill.astro";
               <h3 class="modal-title">Delete this pledge?</h3>
               <button class="modal-close" aria-label="Close">✕</button>
             </div>
-            <p class="modal-body">This can't be undone. The pledge will be removed from the event tally.</p>
+            <p class="modal-body">A grungle bird never forgets, but the ledger will.</p>
             <div class="modal-actions">
               <button class="button ghost">Cancel</button>
               <button class="button danger">Delete</button>
@@ -192,9 +190,13 @@ import PromoPill from "../components/PromoPill.astro";
 
     <section class="sg-section">
       <p class="eyebrow">Promo capsule</p>
-      <p class="sg-note">The accent-tinted "what's on" slot (the <code>PromoPill</code> component) — points at the current event on the home and events pages. On hover its glow deliberately bleeds <em>through</em> the translucent fill — a flaky-neon-sign look that's intentional, not a bug to fix.</p>
+      <p class="sg-note">The accent-tinted "what's on" slot — the promo capsule primitive that <code>PromoPill</code> renders — directs visitors to something important. On hover its glow deliberately bleeds <em>through</em> the translucent fill — a flaky-neon-sign look that's intentional, not a bug to fix.</p>
       <div class="sg-row">
-        <PromoPill href="/events/framily-beach-bar-2026" label="Mike's Beach Bar — pledge the bar" />
+        <span class="promo" aria-hidden="true">
+        <span class="pdot" aria-hidden="true"></span>
+        Free drinks, tonight only
+        <span class="arr" aria-hidden="true">→</span>
+      </span>
       </div>
     </section>
 
@@ -227,11 +229,11 @@ import PromoPill from "../components/PromoPill.astro";
         <div class="field error">
           <label class="label" for="sg-name-err">Cocktail name</label>
           <input id="sg-name-err" type="text" value="" class="error" aria-invalid="true" aria-describedby="sg-name-err-help" />
-          <p class="help" id="sg-name-err-help">! Needs a name before you can save.</p>
+          <p class="help" id="sg-name-err-help">! The hardest part. Still required.</p>
         </div>
         <div class="field">
           <label for="sg-locked">Locked recipe</label>
-          <input id="sg-locked" type="text" value="Not editable right now" disabled />
+          <input id="sg-locked" type="text" value="No touchy" disabled />
         </div>
         <div class="field">
           <label for="sg-amount">Amount (oz)</label>
