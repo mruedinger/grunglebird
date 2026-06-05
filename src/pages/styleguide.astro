@@ -1,6 +1,5 @@
 ---
 import Layout from "../layouts/Layout.astro";
-import PromoPill from "../components/PromoPill.astro";
 
 // The living registry for issue #36: every design token and shared primitive
 // rendered on one page. Public but intentionally NOT linked from the nav — it's a
@@ -191,9 +190,13 @@ import PromoPill from "../components/PromoPill.astro";
 
     <section class="sg-section">
       <p class="eyebrow">Promo capsule</p>
-      <p class="sg-note">The accent-tinted "what's on" slot (the <code>PromoPill</code> component) — directs visitors to something important. On hover its glow deliberately bleeds <em>through</em> the translucent fill — a flaky-neon-sign look that's intentional, not a bug to fix.</p>
+      <p class="sg-note">The accent-tinted "what's on" slot — the promo capsule primitive that <code>PromoPill</code> renders — directs visitors to something important. On hover its glow deliberately bleeds <em>through</em> the translucent fill — a flaky-neon-sign look that's intentional, not a bug to fix.</p>
       <div class="sg-row">
-        <PromoPill label="Free drinks, tonight only" />
+        <span class="promo" aria-hidden="true">
+        <span class="pdot" aria-hidden="true"></span>
+        Free drinks, tonight only
+        <span class="arr" aria-hidden="true">→</span>
+      </span>
       </div>
     </section>
 
