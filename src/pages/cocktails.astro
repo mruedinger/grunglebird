@@ -87,7 +87,6 @@ const priceDollars = (r: IngredientRow): string =>
                         data-punit={r.purchase_unit ?? ""}
                         data-price={priceDollars(r)}
                       >Edit</button>
-                      <button type="button" class="button danger sm js-del" data-id={r.id} data-name={r.name}>Delete</button>
                     </div>
                   </td>
                 )}
@@ -147,6 +146,7 @@ const priceDollars = (r: IngredientRow): string =>
               <input type="number" id="f-price" min="0" step="any" inputmode="decimal" autocomplete="off" />
             </div>
             <div class="modal-actions">
+              <button type="button" class="button danger del-action is-hidden" id="ing-delete">Delete</button>
               <button type="button" class="button ghost" id="ing-cancel">Cancel</button>
               <button type="submit" class="button" id="ing-save">Save</button>
             </div>
@@ -237,6 +237,7 @@ const priceDollars = (r: IngredientRow): string =>
       const errBox = document.getElementById("ing-error")!;
       const errMsg = document.getElementById("ing-error-msg")!;
       const saveBtn = document.getElementById("ing-save") as HTMLButtonElement;
+      const delBtn = document.getElementById("ing-delete") as HTMLButtonElement;
       const f = {
         id: document.getElementById("f-id") as HTMLInputElement,
         name: document.getElementById("f-name") as HTMLInputElement,
@@ -271,9 +272,11 @@ const priceDollars = (r: IngredientRow): string =>
           f.amount.value = data.amount ?? "";
           f.punit.value = data.punit ?? "";
           f.price.value = data.price ?? "";
+          delBtn.classList.remove("is-hidden");
         } else {
           title.textContent = "Add ingredient";
           f.id.value = "";
+          delBtn.classList.add("is-hidden");
         }
         modal.classList.remove("is-hidden");
         f.name.focus();
@@ -293,14 +296,14 @@ const priceDollars = (r: IngredientRow): string =>
         btn.addEventListener("click", () => openModal(btn.dataset));
       });
 
-      document.querySelectorAll<HTMLButtonElement>(".js-del").forEach((btn) => {
-        btn.addEventListener("click", async () => {
-          const name = btn.dataset.name ?? "this ingredient";
-          if (!confirm(`Delete "${name}"?`)) return;
-          const r = await fetch(`/api/admin/ingredients/${btn.dataset.id}`, { method: "DELETE" });
-          if (r.ok) location.reload();
-          else alert("Delete failed.");
-        });
+      delBtn.addEventListener("click", async () => {
+        const id = f.id.value;
+        if (!id) return;
+        const name = f.name.value || "this ingredient";
+        if (!confirm(`Delete "${name}"?`)) return;
+        const r = await fetch(`/api/admin/ingredients/${id}`, { method: "DELETE" });
+        if (r.ok) location.reload();
+        else alert("Delete failed.");
       });
 
       form.addEventListener("submit", async (e) => {
@@ -386,6 +389,10 @@ const priceDollars = (r: IngredientRow): string =>
     .manage {
       display: flex;
       gap: var(--space-xs);
+    }
+    /* float the modal's destructive action away from Save to avoid a mis-click */
+    .del-action {
+      margin-inline-end: auto;
     }
     .price-head {
       margin-top: var(--space-md);
