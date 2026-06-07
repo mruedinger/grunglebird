@@ -272,6 +272,9 @@ const priceDollars = (r: IngredientRow): string =>
           f.amount.value = data.amount ?? "";
           f.punit.value = data.punit ?? "";
           f.price.value = data.price ?? "";
+          // snapshot the row's real identity for Delete — the name field is editable.
+          delBtn.dataset.id = data.id ?? "";
+          delBtn.dataset.name = data.name ?? "";
           delBtn.classList.remove("is-hidden");
         } else {
           title.textContent = "Add ingredient";
@@ -297,9 +300,11 @@ const priceDollars = (r: IngredientRow): string =>
       });
 
       delBtn.addEventListener("click", async () => {
-        const id = f.id.value;
+        // use the snapshot from openModal, not the live (editable) name field, so the
+        // confirm text always matches the row this id actually deletes.
+        const id = delBtn.dataset.id;
         if (!id) return;
-        const name = f.name.value || "this ingredient";
+        const name = delBtn.dataset.name || "this ingredient";
         if (!confirm(`Delete "${name}"?`)) return;
         const r = await fetch(`/api/admin/ingredients/${id}`, { method: "DELETE" });
         if (r.ok) location.reload();
