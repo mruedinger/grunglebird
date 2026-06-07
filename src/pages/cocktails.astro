@@ -358,9 +358,9 @@ const priceDollars = (r: IngredientRow): string =>
     .add-btn {
       margin-left: auto;
     }
-    /* opt-in cap on the shared .table-frame: ~8 rows, then sticky header + body scroll */
+    /* opt-in cap on the shared .table-frame: a few rows, then sticky header + body scroll */
     .inv-scroll {
-      --table-max-block: 28rem;
+      --table-max-block: 16rem;
     }
     /* sortable header: a plain text button (not the .button primitive) inside the th */
     .th-sort {
