@@ -1,27 +1,397 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { env } from "cloudflare:workers";
+import { type AuthEnv, getSession } from "../lib/auth";
+import { UNITS } from "../lib/ingredients";
+
+const isAdmin = await getSession(Astro.request, env as AuthEnv);
+
+type IngredientRow = {
+  id: number;
+  name: string;
+  category: string | null;
+  default_unit: string | null;
+  purchase_amount: number | null;
+  purchase_unit: string | null;
+  purchase_price_cents: number | null;
+  price_updated_at: number | null;
+};
+
+const { results: ingredients } = await env.DB.prepare(
+  `SELECT id, name, category, default_unit, purchase_amount, purchase_unit,
+          purchase_price_cents, price_updated_at
+   FROM ingredients
+   ORDER BY category COLLATE NOCASE, name COLLATE NOCASE`,
+).all<IngredientRow>();
+
+const categories = [
+  ...new Set(ingredients.map((i) => i.category).filter((c): c is string => !!c)),
+].sort((a, b) => a.localeCompare(b));
+
+const colspan = isAdmin ? 3 : 2;
+const emptyText = isAdmin ? "nothing here yet — add the first bottle." : "the shelf's bare.";
+
+const priceDollars = (r: IngredientRow): string =>
+  r.purchase_price_cents == null ? "" : String(r.purchase_price_cents / 100);
 ---
 
 <Layout title="Cocktails — grunglebird" active="cocktails">
   <main class="container">
     <h1 class="hero">Cocktails</h1>
-    <p class="copy muted">everyone keeps asking for a table…</p>
 
-    <div class="section-head">
-      <h2>Recipes</h2>
-      <span class="badge">Coming soon</span>
-    </div>
+    <section class="inventory">
+      <p class="eyebrow">Inventory</p>
+      <p class="copy muted">everything behind the bar — allegedly in stock.</p>
+
+      <div class="controls">
+        <div class="search-ic control-grow">
+          <span class="mag">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg>
+          </span>
+          <input type="search" id="filter-name" placeholder="Filter by name or category" aria-label="Filter by name or category" autocomplete="off" />
+        </div>
+        {isAdmin && (
+          <button type="button" class="button add-btn" id="ing-add">Add more</button>
+        )}
+      </div>
+
+      <div class="table-frame inv-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="none">
+                <button type="button" class="th-sort" data-key="name">Name</button>
+              </th>
+              <th scope="col" aria-sort="ascending">
+                <button type="button" class="th-sort" data-key="category">Category</button>
+              </th>
+              {isAdmin && <th scope="col"></th>}
+            </tr>
+          </thead>
+          <tbody id="ing-tbody">
+            {ingredients.map((r) => (
+              <tr class="ing-row" data-name={r.name} data-category={r.category ?? ""}>
+                <td>{r.name}</td>
+                <td>{r.category}</td>
+                {isAdmin && (
+                  <td>
+                    <div class="manage">
+                      <button
+                        type="button"
+                        class="button ghost sm js-edit"
+                        data-id={r.id}
+                        data-name={r.name}
+                        data-category={r.category ?? ""}
+                        data-unit={r.default_unit ?? ""}
+                        data-amount={r.purchase_amount ?? ""}
+                        data-punit={r.purchase_unit ?? ""}
+                        data-price={priceDollars(r)}
+                      >Edit</button>
+                      <button type="button" class="button danger sm js-del" data-id={r.id} data-name={r.name}>Delete</button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
+            <tr id="ing-empty" hidden={ingredients.length > 0}>
+              <td colspan={colspan} class="muted" id="ing-empty-msg">{emptyText}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    {isAdmin && (
+      <div class="modal-scrim is-hidden" id="ing-modal" role="dialog" aria-modal="true" aria-labelledby="ing-modal-title">
+        <div class="modal">
+          <div class="modal-head">
+            <h2 class="modal-title" id="ing-modal-title">Add ingredient</h2>
+            <button type="button" class="modal-close" id="ing-modal-close" aria-label="Close">✕</button>
+          </div>
+          <div class="alert alert-danger is-hidden" id="ing-error" role="alert">
+            <span class="alert-icon">!</span>
+            <div><p class="alert-body" id="ing-error-msg"></p></div>
+          </div>
+          <form id="ing-form">
+            <input type="hidden" id="f-id" />
+            <div class="field">
+              <label for="f-name">Name</label>
+              <input type="text" id="f-name" required maxlength="80" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="f-category">Category</label>
+              <input type="text" id="f-category" required maxlength="40" list="cat-list" autocomplete="off" />
+              <datalist id="cat-list">{categories.map((c) => <option value={c}></option>)}</datalist>
+              <p class="help">Search label — e.g. rum, syrup, bitters.</p>
+            </div>
+            <div class="field">
+              <label for="f-unit">Default unit</label>
+              <div class="select-wrap">
+                <select id="f-unit" required>
+                  {UNITS.map((u) => <option value={u}>{u}</option>)}
+                </select>
+              </div>
+              <p class="help">Pre-fills a recipe line; still overridable there.</p>
+            </div>
+            <p class="label price-head">Price fallback <span class="muted">(optional)</span></p>
+            <div class="field">
+              <label for="f-amount">Purchase amount</label>
+              <input type="number" id="f-amount" min="0" step="any" inputmode="decimal" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="f-punit">Purchase unit</label>
+              <input type="text" id="f-punit" maxlength="20" placeholder="ml, oz, each, bag…" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="f-price">Purchase price ($)</label>
+              <input type="number" id="f-price" min="0" step="any" inputmode="decimal" autocomplete="off" />
+            </div>
+            <div class="modal-actions">
+              <button type="button" class="button ghost" id="ing-cancel">Cancel</button>
+              <button type="submit" class="button" id="ing-save">Save</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
   </main>
 
+  <script>
+    // --- Browse: client-side filter + header-click sort over the SSR rows (107; cheap) ---
+    const tbody = document.getElementById("ing-tbody");
+    if (tbody) {
+      const rows = Array.from(tbody.querySelectorAll<HTMLTableRowElement>("tr.ing-row"));
+      const emptyRow = document.getElementById("ing-empty") as HTMLTableRowElement | null;
+      const emptyMsg = document.getElementById("ing-empty-msg");
+      const defaultEmptyText = emptyMsg?.textContent ?? "";
+      const search = document.getElementById("filter-name") as HTMLInputElement | null;
+      const headers = Array.from(document.querySelectorAll<HTMLButtonElement>("button.th-sort"));
+
+      const lc = (s: string | undefined) => (s ?? "").toLowerCase();
+      let sortKey = "category";
+      let sortDir: "asc" | "desc" = "asc";
+
+      const cmp = (a: HTMLTableRowElement, b: HTMLTableRowElement, key: string) =>
+        lc(a.dataset[key]).localeCompare(lc(b.dataset[key]));
+
+      const apply = () => {
+        const q = lc(search?.value).trim();
+        let visible = 0;
+        for (const tr of rows) {
+          // match on any visible column — name or category
+          const match = !q || lc(tr.dataset.name).includes(q) || lc(tr.dataset.category).includes(q);
+          tr.hidden = !match;
+          if (match) visible++;
+        }
+
+        const dir = sortDir === "asc" ? 1 : -1;
+        const sorted = [...rows].sort((a, b) => {
+          let c = cmp(a, b, sortKey) * dir;
+          if (c === 0 && sortKey !== "name") c = cmp(a, b, "name"); // stable tiebreak by name
+          return c;
+        });
+        for (const tr of sorted) tbody.appendChild(tr);
+
+        if (emptyRow) {
+          if (emptyMsg && rows.length > 0) {
+            emptyMsg.textContent = visible === 0 ? "nothing matches." : defaultEmptyText;
+          }
+          emptyRow.hidden = !(rows.length === 0 || visible === 0);
+          tbody.appendChild(emptyRow); // keep the empty row last
+        }
+      };
+
+      // Reflect the active sort on the headers — aria-sort drives both AT and the ▲/▼ glyph.
+      const syncAria = () => {
+        for (const btn of headers) {
+          btn.closest("th")?.setAttribute(
+            "aria-sort",
+            btn.dataset.key === sortKey ? (sortDir === "asc" ? "ascending" : "descending") : "none",
+          );
+        }
+      };
+
+      for (const btn of headers) {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.key ?? "name";
+          if (key === sortKey) sortDir = sortDir === "asc" ? "desc" : "asc";
+          else {
+            sortKey = key;
+            sortDir = "asc";
+          }
+          syncAria();
+          apply();
+        });
+      }
+
+      search?.addEventListener("input", apply);
+      syncAria();
+      apply();
+    }
+
+    // --- Admin: create / edit / delete via the gated API, then reload to re-render ---
+    const modal = document.getElementById("ing-modal");
+    if (modal) {
+      const form = document.getElementById("ing-form") as HTMLFormElement;
+      const title = document.getElementById("ing-modal-title")!;
+      const errBox = document.getElementById("ing-error")!;
+      const errMsg = document.getElementById("ing-error-msg")!;
+      const saveBtn = document.getElementById("ing-save") as HTMLButtonElement;
+      const f = {
+        id: document.getElementById("f-id") as HTMLInputElement,
+        name: document.getElementById("f-name") as HTMLInputElement,
+        category: document.getElementById("f-category") as HTMLInputElement,
+        // HTMLSelectElement trips both the `as` overlap check and the querySelector
+        // generic constraint in this TS/lib version, so use the blessed unknown escape.
+        unit: document.getElementById("f-unit") as unknown as HTMLSelectElement,
+        amount: document.getElementById("f-amount") as HTMLInputElement,
+        punit: document.getElementById("f-punit") as HTMLInputElement,
+        price: document.getElementById("f-price") as HTMLInputElement,
+      };
+
+      const showError = (msg: string) => {
+        errMsg.textContent = msg;
+        errBox.classList.remove("is-hidden");
+      };
+      const clearError = () => {
+        errBox.classList.add("is-hidden");
+        errMsg.textContent = "";
+      };
+      const closeModal = () => modal.classList.add("is-hidden");
+
+      const openModal = (data?: DOMStringMap) => {
+        clearError();
+        form.reset();
+        if (data) {
+          title.textContent = "Edit ingredient";
+          f.id.value = data.id ?? "";
+          f.name.value = data.name ?? "";
+          f.category.value = data.category ?? "";
+          f.unit.value = data.unit ?? "";
+          f.amount.value = data.amount ?? "";
+          f.punit.value = data.punit ?? "";
+          f.price.value = data.price ?? "";
+        } else {
+          title.textContent = "Add ingredient";
+          f.id.value = "";
+        }
+        modal.classList.remove("is-hidden");
+        f.name.focus();
+      };
+
+      document.getElementById("ing-add")?.addEventListener("click", () => openModal());
+      document.getElementById("ing-modal-close")?.addEventListener("click", closeModal);
+      document.getElementById("ing-cancel")?.addEventListener("click", closeModal);
+      modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+      });
+      document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && !modal.classList.contains("is-hidden")) closeModal();
+      });
+
+      document.querySelectorAll<HTMLButtonElement>(".js-edit").forEach((btn) => {
+        btn.addEventListener("click", () => openModal(btn.dataset));
+      });
+
+      document.querySelectorAll<HTMLButtonElement>(".js-del").forEach((btn) => {
+        btn.addEventListener("click", async () => {
+          const name = btn.dataset.name ?? "this ingredient";
+          if (!confirm(`Delete "${name}"?`)) return;
+          const r = await fetch(`/api/admin/ingredients/${btn.dataset.id}`, { method: "DELETE" });
+          if (r.ok) location.reload();
+          else alert("Delete failed.");
+        });
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        clearError();
+        const id = f.id.value;
+        const payload = {
+          name: f.name.value,
+          category: f.category.value,
+          default_unit: f.unit.value,
+          purchase_amount: f.amount.value,
+          purchase_unit: f.punit.value,
+          purchase_price: f.price.value,
+        };
+        saveBtn.disabled = true;
+        try {
+          const r = await fetch(id ? `/api/admin/ingredients/${id}` : "/api/admin/ingredients", {
+            method: id ? "PATCH" : "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (r.ok) {
+            location.reload();
+            return;
+          }
+          const { error } = (await r.json().catch(() => ({ error: "Save failed." }))) as {
+            error?: string;
+          };
+          showError(error ?? "Save failed.");
+        } catch {
+          showError("Network error. Try again.");
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+    }
+  </script>
+
   <style>
-    .section-head {
+    /* Layout only — composes the shared .search-ic / .table / .modal / .alert / .button /
+       .eyebrow primitives from markup; this block never re-styles them (see docs/styling.md). */
+    .inventory {
+      margin-top: var(--space-xl);
+    }
+    .controls {
       display: flex;
       align-items: center;
       gap: var(--space-sm);
-      margin-top: var(--space-xl);
+      margin-bottom: var(--space-lg);
     }
-    .section-head h2 {
-      margin: 0;
+    .control-grow {
+      flex: 1 1 12rem;
+      min-width: 0;
+    }
+    .add-btn {
+      margin-left: auto;
+    }
+    /* opt-in cap on the shared .table-frame: a few rows, then sticky header + body scroll */
+    .inv-scroll {
+      --table-max-block: 16rem;
+    }
+    /* sortable header: a plain text button (not the .button primitive) inside the th */
+    .th-sort {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .th-sort:hover {
+      opacity: 0.7;
+    }
+    th[aria-sort="ascending"] .th-sort::after {
+      content: "▲";
+    }
+    th[aria-sort="descending"] .th-sort::after {
+      content: "▼";
+    }
+    .manage {
+      display: flex;
+      gap: var(--space-xs);
+    }
+    .price-head {
+      margin-top: var(--space-md);
+    }
+    .is-hidden {
+      display: none !important;
     }
   </style>
 </Layout>

@@ -5,6 +5,18 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-07
+
+### Added
+- **Cocktail ingredient inventory.** `/cocktails` is now a working, admin-curated catalog
+  instead of a stub. A new D1 `ingredients` table (migration `0004`) holds the flat
+  ingredient list — name, search-label category, default unit, and optional price-fallback
+  data (what's bought, how much, for what, last updated). Signed-in admins create / edit /
+  delete through a modal; everyone browses, filters by name/category, and sorts. The 107
+  curated ingredients seed from a committed, idempotent `seed/ingredients.sql`
+  (`npm run db:seed:local|remote`). First slice of the cocktails-catalog epic; the price
+  data is stored here, the cost tool that uses it is a later chunk. (#20)
+
 ## 2026-06-03
 
 ### Added
