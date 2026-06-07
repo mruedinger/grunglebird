@@ -285,6 +285,25 @@ import Layout from "../layouts/Layout.astro";
           </tbody>
         </table>
       </div>
+      <p class="sg-note">Sticky header + opt-in scroll — a page caps the height with <code>--table-max-block</code> and the header stays put while the body scrolls.</p>
+      <div class="table-frame sg-scroll">
+        <table class="table">
+          <thead>
+            <tr><th>Date</th><th>Name</th><th>Amount</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>May 24</td><td>Avery</td><td class="amt">$24.00</td></tr>
+            <tr><td>May 23</td><td>Blair</td><td class="amt">$18.00</td></tr>
+            <tr><td>May 22</td><td>Jordan</td><td class="amt">$40.00</td></tr>
+            <tr><td>May 21</td><td>Quinn</td><td class="amt">$16.00</td></tr>
+            <tr><td>May 20</td><td>Sam</td><td class="amt">$12.00</td></tr>
+            <tr><td>May 19</td><td>Reese</td><td class="amt">$28.00</td></tr>
+            <tr><td>May 18</td><td>Devin</td><td class="amt">$22.00</td></tr>
+            <tr><td>May 17</td><td>Marlowe</td><td class="amt">$34.00</td></tr>
+            <tr><td>May 16</td><td>Frankie</td><td class="amt">$20.00</td></tr>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="sg-section">
@@ -318,6 +337,9 @@ import Layout from "../layouts/Layout.astro";
     }
     .sg-section {
       margin-top: var(--space-3xl);
+    }
+    .sg-scroll {
+      --table-max-block: 9rem; /* demo cap so the sticky header + scroll is visible */
     }
     .sg-note {
       color: var(--muted);

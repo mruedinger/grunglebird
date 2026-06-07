@@ -28,19 +28,9 @@ const categories = [
   ...new Set(ingredients.map((i) => i.category).filter((c): c is string => !!c)),
 ].sort((a, b) => a.localeCompare(b));
 
-const colspan = isAdmin ? 5 : 4;
+const colspan = isAdmin ? 3 : 2;
 const emptyText = isAdmin ? "nothing here yet — add the first bottle." : "the shelf's bare.";
 
-const dollars = (cents: number) =>
-  cents % 100 === 0 ? `$${cents / 100}` : `$${(cents / 100).toFixed(2)}`;
-
-// What a bottle cost, and for how much of it — e.g. "$30 · 750 ml".
-const priceDisplay = (r: IngredientRow): string | null => {
-  if (r.purchase_price_cents == null) return null;
-  const head = dollars(r.purchase_price_cents);
-  if (r.purchase_amount == null) return head;
-  return `${head} · ${r.purchase_amount}${r.purchase_unit ? ` ${r.purchase_unit}` : ""}`;
-};
 const priceDollars = (r: IngredientRow): string =>
   r.purchase_price_cents == null ? "" : String(r.purchase_price_cents / 100);
 ---
@@ -48,74 +38,61 @@ const priceDollars = (r: IngredientRow): string =>
 <Layout title="Cocktails — grunglebird" active="cocktails">
   <main class="container">
     <h1 class="hero">Cocktails</h1>
-    <p class="copy muted">everything behind the bar — allegedly in stock.</p>
 
     <section class="inventory">
+      <p class="eyebrow">Inventory</p>
+      <p class="copy muted">everything behind the bar — allegedly in stock.</p>
+
       <div class="controls">
         <div class="search-ic control-grow">
           <span class="mag">
             <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg>
           </span>
-          <input type="search" id="filter-name" placeholder="Filter by name" aria-label="Filter by name" autocomplete="off" />
-        </div>
-        <div class="select-wrap">
-          <select id="filter-category" aria-label="Filter by category">
-            <option value="">All categories</option>
-            {categories.map((c) => <option value={c}>{c}</option>)}
-          </select>
-        </div>
-        <div class="select-wrap">
-          <select id="sort-by" aria-label="Sort by">
-            <option value="category">Sort: category</option>
-            <option value="name">Sort: name</option>
-          </select>
+          <input type="search" id="filter-name" placeholder="Filter by name or category" aria-label="Filter by name or category" autocomplete="off" />
         </div>
         {isAdmin && (
-          <button type="button" class="button add-btn" id="ing-add">Add ingredient</button>
+          <button type="button" class="button add-btn" id="ing-add">Add more</button>
         )}
       </div>
 
-      <div class="table-frame">
+      <div class="table-frame inv-scroll">
         <table class="table">
           <thead>
             <tr>
-              <th scope="col">Name</th>
-              <th scope="col">Category</th>
-              <th scope="col">Unit</th>
-              <th scope="col">Price</th>
+              <th scope="col" aria-sort="none">
+                <button type="button" class="th-sort" data-key="name">Name</button>
+              </th>
+              <th scope="col" aria-sort="ascending">
+                <button type="button" class="th-sort" data-key="category">Category</button>
+              </th>
               {isAdmin && <th scope="col"></th>}
             </tr>
           </thead>
           <tbody id="ing-tbody">
-            {ingredients.map((r) => {
-              const price = priceDisplay(r);
-              return (
-                <tr class="ing-row" data-name={r.name} data-category={r.category ?? ""}>
-                  <td>{r.name}</td>
-                  <td>{r.category}</td>
-                  <td>{r.default_unit}</td>
-                  <td class="amt">{price ?? <span class="muted">—</span>}</td>
-                  {isAdmin && (
-                    <td>
-                      <div class="manage">
-                        <button
-                          type="button"
-                          class="button ghost sm js-edit"
-                          data-id={r.id}
-                          data-name={r.name}
-                          data-category={r.category ?? ""}
-                          data-unit={r.default_unit ?? ""}
-                          data-amount={r.purchase_amount ?? ""}
-                          data-punit={r.purchase_unit ?? ""}
-                          data-price={priceDollars(r)}
-                        >Edit</button>
-                        <button type="button" class="button danger sm js-del" data-id={r.id} data-name={r.name}>Delete</button>
-                      </div>
-                    </td>
-                  )}
-                </tr>
-              );
-            })}
+            {ingredients.map((r) => (
+              <tr class="ing-row" data-name={r.name} data-category={r.category ?? ""}>
+                <td>{r.name}</td>
+                <td>{r.category}</td>
+                {isAdmin && (
+                  <td>
+                    <div class="manage">
+                      <button
+                        type="button"
+                        class="button ghost sm js-edit"
+                        data-id={r.id}
+                        data-name={r.name}
+                        data-category={r.category ?? ""}
+                        data-unit={r.default_unit ?? ""}
+                        data-amount={r.purchase_amount ?? ""}
+                        data-punit={r.purchase_unit ?? ""}
+                        data-price={priceDollars(r)}
+                      >Edit</button>
+                      <button type="button" class="button danger sm js-del" data-id={r.id} data-name={r.name}>Delete</button>
+                    </div>
+                  </td>
+                )}
+              </tr>
+            ))}
             <tr id="ing-empty" hidden={ingredients.length > 0}>
               <td colspan={colspan} class="muted" id="ing-empty-msg">{emptyText}</td>
             </tr>
@@ -180,35 +157,38 @@ const priceDollars = (r: IngredientRow): string =>
   </main>
 
   <script>
-    // --- Browse: client-side filter + sort over the SSR-rendered rows (107 rows; cheap) ---
+    // --- Browse: client-side filter + header-click sort over the SSR rows (107; cheap) ---
     const tbody = document.getElementById("ing-tbody");
     if (tbody) {
       const rows = Array.from(tbody.querySelectorAll<HTMLTableRowElement>("tr.ing-row"));
       const emptyRow = document.getElementById("ing-empty") as HTMLTableRowElement | null;
       const emptyMsg = document.getElementById("ing-empty-msg");
       const defaultEmptyText = emptyMsg?.textContent ?? "";
-      const nameFilter = document.getElementById("filter-name") as HTMLInputElement | null;
-      const catFilter = document.getElementById("filter-category") as HTMLSelectElement | null;
-      const sortSel = document.getElementById("sort-by") as HTMLSelectElement | null;
+      const search = document.getElementById("filter-name") as HTMLInputElement | null;
+      const headers = Array.from(document.querySelectorAll<HTMLButtonElement>("button.th-sort"));
 
       const lc = (s: string | undefined) => (s ?? "").toLowerCase();
+      let sortKey = "category";
+      let sortDir: "asc" | "desc" = "asc";
+
+      const cmp = (a: HTMLTableRowElement, b: HTMLTableRowElement, key: string) =>
+        lc(a.dataset[key]).localeCompare(lc(b.dataset[key]));
 
       const apply = () => {
-        const q = lc(nameFilter?.value).trim();
-        const cat = catFilter?.value ?? "";
+        const q = lc(search?.value).trim();
         let visible = 0;
         for (const tr of rows) {
-          const match = (!q || lc(tr.dataset.name).includes(q)) && (!cat || tr.dataset.category === cat);
+          // match on any visible column — name or category
+          const match = !q || lc(tr.dataset.name).includes(q) || lc(tr.dataset.category).includes(q);
           tr.hidden = !match;
           if (match) visible++;
         }
 
-        const byName = (a: HTMLTableRowElement, b: HTMLTableRowElement) =>
-          lc(a.dataset.name).localeCompare(lc(b.dataset.name));
+        const dir = sortDir === "asc" ? 1 : -1;
         const sorted = [...rows].sort((a, b) => {
-          if (sortSel?.value === "name") return byName(a, b);
-          const c = lc(a.dataset.category).localeCompare(lc(b.dataset.category));
-          return c !== 0 ? c : byName(a, b);
+          let c = cmp(a, b, sortKey) * dir;
+          if (c === 0 && sortKey !== "name") c = cmp(a, b, "name"); // stable tiebreak by name
+          return c;
         });
         for (const tr of sorted) tbody.appendChild(tr);
 
@@ -221,9 +201,31 @@ const priceDollars = (r: IngredientRow): string =>
         }
       };
 
-      nameFilter?.addEventListener("input", apply);
-      catFilter?.addEventListener("change", apply);
-      sortSel?.addEventListener("change", apply);
+      // Reflect the active sort on the headers — aria-sort drives both AT and the ▲/▼ glyph.
+      const syncAria = () => {
+        for (const btn of headers) {
+          btn.closest("th")?.setAttribute(
+            "aria-sort",
+            btn.dataset.key === sortKey ? (sortDir === "asc" ? "ascending" : "descending") : "none",
+          );
+        }
+      };
+
+      for (const btn of headers) {
+        btn.addEventListener("click", () => {
+          const key = btn.dataset.key ?? "name";
+          if (key === sortKey) sortDir = sortDir === "asc" ? "desc" : "asc";
+          else {
+            sortKey = key;
+            sortDir = "asc";
+          }
+          syncAria();
+          apply();
+        });
+      }
+
+      search?.addEventListener("input", apply);
+      syncAria();
       apply();
     }
 
@@ -338,14 +340,13 @@ const priceDollars = (r: IngredientRow): string =>
   </script>
 
   <style>
-    /* Layout only — composes the shared .search-ic / .select-wrap / .table / .modal / .alert
-       / .button primitives from markup; this block never re-styles them (see docs/styling.md). */
+    /* Layout only — composes the shared .search-ic / .table / .modal / .alert / .button /
+       .eyebrow primitives from markup; this block never re-styles them (see docs/styling.md). */
     .inventory {
       margin-top: var(--space-xl);
     }
     .controls {
       display: flex;
-      flex-wrap: wrap;
       align-items: center;
       gap: var(--space-sm);
       margin-bottom: var(--space-lg);
@@ -356,6 +357,31 @@ const priceDollars = (r: IngredientRow): string =>
     }
     .add-btn {
       margin-left: auto;
+    }
+    /* opt-in cap on the shared .table-frame: ~8 rows, then sticky header + body scroll */
+    .inv-scroll {
+      --table-max-block: 28rem;
+    }
+    /* sortable header: a plain text button (not the .button primitive) inside the th */
+    .th-sort {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .th-sort:hover {
+      opacity: 0.7;
+    }
+    th[aria-sort="ascending"] .th-sort::after {
+      content: "▲";
+    }
+    th[aria-sort="descending"] .th-sort::after {
+      content: "▼";
     }
     .manage {
       display: flex;

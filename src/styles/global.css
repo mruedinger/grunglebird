@@ -501,6 +501,10 @@ input.error:focus {
   border: 1px solid var(--hair);
   border-radius: var(--radius-md);
   overflow-x: auto; /* a wide table scrolls rather than clipping on narrow screens */
+  /* Opt-in vertical scroll: a page sets --table-max-block to cap the height; the header
+     then sticks while the body scrolls. Unset → none, so uncapped tables are unchanged. */
+  overflow-y: auto;
+  max-block-size: var(--table-max-block, none);
 }
 .table-frame > .table {
   margin: 0;
@@ -517,8 +521,15 @@ table.table {
   font-size: 0.82rem;
   text-align: left;
   padding: 0.6rem 0.85rem;
-  background: color-mix(in srgb, var(--text) 6%, transparent);
-  border-bottom: 1px solid var(--hair);
+  /* Opaque (mixed over --surface, same rendered color) so scrolled rows don't bleed
+     through when the header is sticky. */
+  background: color-mix(in srgb, var(--text) 6%, var(--surface));
+  /* Separator as an inset shadow, not border-bottom: a collapsed border detaches from a
+     sticky thead (Chromium), a box-shadow stays put. Same 1px hairline at rest. */
+  box-shadow: inset 0 -1px 0 var(--hair);
+  position: sticky;
+  inset-block-start: 0;
+  z-index: 1;
 }
 .table td {
   padding: 0.6rem 0.85rem;
