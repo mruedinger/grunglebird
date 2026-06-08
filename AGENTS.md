@@ -26,7 +26,7 @@ grunglebird's personality lives in **microcopy**, not chrome. Actively look for 
 - Register: absurd, a little mysterious, unpretentious dive-bar. Deadpan and understated; the craft is real but never bragged about.
 - Terse wins. Cut any line that over-explains its own joke.
 - The joke is often in what's left unsaid — faint or misdirected praise, not a stated punchline.
-- Never punch down at the patron. The deadpan lands on the situation, the bird, or Mike himself — never on what someone orders or how they make it. The bar doesn't care what you drink.
+- Avoid mocking, judging, talking down to, or brushing off the patron. Everyone is welcome here, no questions asked.
 - Don't force it, and don't prescribe tone in issues/specs — frame the function and let the voice set the register at drafting time; float options rather than committing early.
 - Some things stay unexplained — the name's meaning, who "Mike" is. Mysteries, not origin stories.
 
