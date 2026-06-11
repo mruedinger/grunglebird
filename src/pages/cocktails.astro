@@ -223,18 +223,14 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
     <!-- Recipe modal: view for everyone; admins can flip it in place to the build form. -->
     <div class="modal-scrim is-hidden" id="recipe-modal" role="dialog" aria-modal="true" aria-labelledby="r-title">
       <div class="modal recipe-modal">
-        <div class="modal-head">
-          <h2 class="modal-title" id="r-title">Recipe</h2>
-          <button type="button" class="modal-close" id="r-close" aria-label="Close">✕</button>
+        <div class="modal-head r-head">
+          <h2 class="modal-title r-name" id="r-title">Recipe</h2>
+          <button type="button" class="modal-close r-x" id="r-close" aria-label="Close">✕</button>
         </div>
 
         <div id="r-view">
           <p class="r-micro muted" id="r-micro"></p>
           <ul class="r-lines" id="r-build"></ul>
-          <div id="r-garnish-wrap">
-            <p class="r-garnish-label muted">garnish — optional</p>
-            <ul class="r-lines r-garnish" id="r-garnish"></ul>
-          </div>
           <div class="r-method" id="r-method"></div>
           <p class="r-notes muted" id="r-notes"></p>
           {isAdmin && (
@@ -529,25 +525,39 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
 
     // --- Recipe modal: view for everyone, in-place edit/create for admins ---
     const rModal = document.getElementById("recipe-modal")!;
+    const rCard = rModal.querySelector(".recipe-modal")!;
     const rView = document.getElementById("r-view")!;
     const rForm = document.getElementById("r-form") as HTMLFormElement | null;
     const rTitle = document.getElementById("r-title")!;
     let current: Recipe | null = null;
 
-    const renderLines = (ul: HTMLElement, lines: RecipeLine[]) => {
+    // Garnish lines render in the same grid as the build (columns stay aligned),
+    // quietly de-emphasized — optional without saying so.
+    const renderLines = (ul: HTMLElement, r: Recipe) => {
       ul.textContent = "";
-      for (const l of lines) {
-        const li = document.createElement("li");
-        const amt = document.createElement("span");
-        amt.className = "amt";
-        amt.textContent = l.amt;
-        const ing = document.createElement("span");
-        ing.className = "ing";
-        ing.textContent = l.ingredient;
-        li.appendChild(amt);
-        li.appendChild(ing);
-        ul.appendChild(li);
+      const append = (lines: RecipeLine[], garnish: boolean) => {
+        for (const l of lines) {
+          const li = document.createElement("li");
+          if (garnish) li.className = "garnish";
+          const amt = document.createElement("span");
+          amt.className = "amt";
+          amt.textContent = l.amt;
+          const ing = document.createElement("span");
+          ing.className = "ing";
+          ing.textContent = l.ingredient;
+          li.appendChild(amt);
+          li.appendChild(ing);
+          ul.appendChild(li);
+        }
+      };
+      append(r.build, false);
+      if (r.garnish.length > 0) {
+        const sep = document.createElement("li");
+        sep.className = "sep";
+        sep.setAttribute("aria-hidden", "true");
+        ul.appendChild(sep);
       }
+      append(r.garnish, true);
     };
 
     const showView = (r: Recipe) => {
@@ -556,10 +566,7 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
       const micro = document.getElementById("r-micro")!;
       micro.textContent = r.micro ?? "";
       micro.hidden = !r.micro;
-      renderLines(document.getElementById("r-build")!, r.build);
-      const garnishWrap = document.getElementById("r-garnish-wrap")!;
-      garnishWrap.hidden = r.garnish.length === 0;
-      renderLines(document.getElementById("r-garnish")!, r.garnish);
+      renderLines(document.getElementById("r-build")!, r);
       const method = document.getElementById("r-method")!;
       method.textContent = "";
       for (const step of r.method) {
@@ -570,6 +577,10 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
       const notes = document.getElementById("r-notes")!;
       notes.textContent = r.notes ?? "";
       notes.hidden = !r.notes;
+      rCard.classList.add("is-view");
+      // wordy recipes get the full modal width so the prose isn't cramped
+      const proseLength = r.method.join(" ").length + (r.notes ?? "").length;
+      rCard.classList.toggle("is-roomy", proseLength > 150);
       rView.classList.remove("is-hidden");
       rForm?.classList.add("is-hidden");
       rModal.classList.remove("is-hidden");
@@ -717,6 +728,7 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
           delete delBtn.dataset.id;
         }
         syncCharacterState();
+        rCard.classList.remove("is-view");
         rView.classList.add("is-hidden");
         rForm.classList.remove("is-hidden");
         rModal.classList.remove("is-hidden");
@@ -979,53 +991,81 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
       max-block-size: calc(100dvh - 2 * var(--space-lg));
       overflow-y: auto;
     }
-    /* view mode: ingredient list framed by hairlines, amounts in the accent column —
-       same arrangement as the home-page recipe card */
+    /* view mode reads at the home card's intimate width; edit/create keeps the full
+       modal width for the line-editor rows. Wordy recipes (long method/notes) opt
+       back out via is-roomy so the prose isn't cramped. */
+    .recipe-modal.is-view:not(.is-roomy) {
+      max-width: 340px; /* recipe column width — layout one-off, matches the home card */
+    }
+    /* view mode: centered like the home-page recipe card — name/micro centered, a
+       two-column centered ingredient grid (red amounts), muted small method/notes.
+       :global() wraps the elements the client script builds: Astro's scoped styles
+       only tag template-rendered elements, so script-built li/span/p miss them. */
+    /* title + micro center as a unit (✕ floats out of the flow); the list block
+       and everything below stay on the left rail */
+    .r-head {
+      position: relative;
+      justify-content: center;
+    }
+    .r-name {
+      font-size: var(--text-lg);
+      text-align: center;
+    }
+    .r-x {
+      position: absolute;
+      top: 0;
+      right: 0;
+    }
     .r-micro {
       font-style: italic;
-      margin: 0 0 var(--space-sm);
+      text-align: center;
+      margin: 0;
     }
     .r-lines {
       list-style: none;
+      margin: var(--space-md) 0 0;
       padding: var(--space-sm) 0;
-      margin: 0;
       border-top: 1px solid var(--hair);
+      display: grid;
+      grid-template-columns: max-content max-content;
+      justify-content: start;
+      column-gap: var(--space-sm);
+      row-gap: var(--space-2xs);
     }
-    .r-lines li {
-      display: flex;
-      gap: var(--space-sm);
-      padding: var(--space-2xs) 0;
+    .r-lines :global(li) {
+      display: contents;
     }
-    .r-lines .amt {
+    .r-lines :global(.amt) {
       color: var(--accent);
       font-variant-numeric: tabular-nums;
-      width: 90px; /* amount + unit column — layout one-off, matches the home card idea */
       text-align: right;
-      flex: 0 0 auto;
     }
-    .r-lines .ing {
+    .r-lines :global(.ing) {
       color: var(--text);
+      text-align: left;
     }
-    .r-garnish-label {
-      font-size: var(--text-sm);
-      margin: 0;
-      padding-top: var(--space-xs);
+    /* half-width hairline between build and garnish, centered over the line block —
+       display:block beats the display:contents all li get above (which has no box) */
+    .r-lines :global(li.sep) {
+      display: block;
+      grid-column: 1 / -1;
       border-top: 1px solid var(--hair);
-    }
-    .r-garnish-label + .r-lines,
-    #r-garnish-wrap .r-lines {
-      border-top: 0;
-      padding-top: 0;
+      width: 75%;
+      margin: var(--space-2xs) auto;
     }
     .r-method {
       border-top: 1px solid var(--hair);
       padding-top: var(--space-sm);
     }
-    .r-method p {
-      margin: 0 0 var(--space-2xs);
+    .r-method :global(p) {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      line-height: 1.5;
+      margin: 0;
     }
     .r-notes {
       font-size: var(--text-sm);
+      white-space: pre-line;
       margin: var(--space-sm) 0 0;
     }
 
