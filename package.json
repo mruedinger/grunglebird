@@ -13,8 +13,6 @@
     "generate-types": "wrangler types",
     "db:migrate:local": "wrangler d1 migrations apply grunglebird-db --local",
     "db:migrate:remote": "wrangler d1 migrations apply grunglebird-db --remote",
-    "db:seed:local": "wrangler d1 execute grunglebird-db --local --file=seed/ingredients.sql",
-    "db:seed:remote": "wrangler d1 execute grunglebird-db --remote --file=seed/ingredients.sql",
     "astro": "astro"
   },
   "dependencies": {
