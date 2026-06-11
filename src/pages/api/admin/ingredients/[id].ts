@@ -71,6 +71,23 @@ export const DELETE: APIRoute = async ({ request, params }) => {
   const id = Number(params.id);
   if (!Number.isInteger(id)) return jsonError(400, 'Invalid id');
 
-  await env.DB.prepare(`DELETE FROM ingredients WHERE id = ?`).bind(id).run();
+  try {
+    await env.DB.prepare(`DELETE FROM ingredients WHERE id = ?`).bind(id).run();
+  } catch (e) {
+    // recipe_lines.ingredient_id has no CASCADE by design — an in-use ingredient
+    // must survive. Surface which recipes hold it so the admin can untangle.
+    if (String((e as Error).message).includes('FOREIGN KEY')) {
+      const { results } = await env.DB.prepare(
+        `SELECT DISTINCT r.name FROM recipes r
+         JOIN recipe_lines l ON l.recipe_id = r.id
+         WHERE l.ingredient_id = ? ORDER BY r.name LIMIT 5`,
+      )
+        .bind(id)
+        .all<{ name: string }>();
+      const names = results.map((r) => r.name).join(', ');
+      return jsonError(409, `Still in use by: ${names}. Remove it from those recipes first.`);
+    }
+    throw e;
+  }
   return Response.json({ ok: true });
 };

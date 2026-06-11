@@ -7,6 +7,16 @@ are intentionally left out to keep this readable.
 
 ## 2026-06-11
 
+### Added
+- **Cocktail recipe DB.** `/cocktails` now leads with the recipe book: a new D1
+  `recipes` + `recipe_lines` schema (migration `0005`) stores ordered ingredient
+  lines referencing the inventory, a clearly-optional garnish section, unnumbered
+  method steps, and notes. Everyone browses, sorts, and searches (all fields,
+  case- and accent-insensitive); a row opens the recipe in a modal. Admins build,
+  edit, reorder, and delete recipes in that same modal. Seeded with the 56 curated
+  recipes. Units gain `leaf`, drop `peel`; deleting an inventory ingredient a
+  recipe still uses is now refused with the recipes that hold it. (#21)
+
 ### Removed
 - **One-time ingredient seed path.** Retired the stale committed ingredient seed
   artifact and generator after the production inventory moved ahead of the original
