@@ -3,6 +3,7 @@ import Layout from "../layouts/Layout.astro";
 import { env } from "cloudflare:workers";
 import { type AuthEnv, getSession } from "../lib/auth";
 import { UNITS } from "../lib/ingredients";
+import { RECIPE_TYPES, formatAmount, normalizeSearch } from "../lib/recipes";
 
 const isAdmin = await getSession(Astro.request, env as AuthEnv);
 
@@ -14,33 +15,158 @@ type IngredientRow = {
   purchase_amount: number | null;
   purchase_unit: string | null;
   purchase_price_cents: number | null;
-  price_updated_at: number | null;
 };
 
-const { results: ingredients } = await env.DB.prepare(
-  `SELECT id, name, category, default_unit, purchase_amount, purchase_unit,
-          purchase_price_cents, price_updated_at
-   FROM ingredients
-   ORDER BY category COLLATE NOCASE, name COLLATE NOCASE`,
-).all<IngredientRow>();
+type RecipeRow = {
+  id: number;
+  name: string;
+  micro: string | null;
+  type: string;
+  character: string | null;
+  method: string;
+  notes: string | null;
+};
+
+type LineRow = {
+  recipe_id: number;
+  ingredient_id: number;
+  amount: number | null;
+  unit: string;
+  is_garnish: number;
+  ingredient: string;
+};
+
+const [{ results: ingredients }, { results: recipes }, { results: lines }] = await Promise.all([
+  env.DB.prepare(
+    `SELECT id, name, category, default_unit, purchase_amount, purchase_unit, purchase_price_cents
+     FROM ingredients
+     ORDER BY name COLLATE NOCASE`,
+  ).all<IngredientRow>(),
+  env.DB.prepare(
+    `SELECT id, name, micro, type, character, method, notes
+     FROM recipes ORDER BY name COLLATE NOCASE`,
+  ).all<RecipeRow>(),
+  env.DB.prepare(
+    `SELECT l.recipe_id, l.ingredient_id, l.amount, l.unit, l.is_garnish, i.name AS ingredient
+     FROM recipe_lines l JOIN ingredients i ON i.id = l.ingredient_id
+     ORDER BY l.recipe_id, l.is_garnish, l.position`,
+  ).all<LineRow>(),
+]);
 
 const categories = [
   ...new Set(ingredients.map((i) => i.category).filter((c): c is string => !!c)),
 ].sort((a, b) => a.localeCompare(b));
 
-const colspan = isAdmin ? 3 : 2;
-const emptyText = isAdmin ? "nothing here yet — add the first bottle." : "the shelf's bare.";
+// Recipe view model: display strings precomputed here so the client renderer stays dumb.
+// "each" hides its unit (5 grapes); a no-qty line leads with its unit (twist lemon).
+const lineView = (l: LineRow) => ({
+  ingredient_id: l.ingredient_id,
+  ingredient: l.ingredient,
+  amount: l.amount,
+  unit: l.unit,
+  amt: [l.amount == null ? "" : formatAmount(l.amount), l.unit === "each" ? "" : l.unit]
+    .filter(Boolean)
+    .join(" "),
+});
 
-const priceDollars = (r: IngredientRow): string =>
-  r.purchase_price_cents == null ? "" : String(r.purchase_price_cents / 100);
+const recipeData = recipes.map((r) => {
+  const mine = lines.filter((l) => l.recipe_id === r.id);
+  return {
+    id: r.id,
+    name: r.name,
+    micro: r.micro,
+    type: r.type,
+    character: r.character,
+    method: r.method.split("\n"),
+    notes: r.notes,
+    build: mine.filter((l) => !l.is_garnish).map(lineView),
+    garnish: mine.filter((l) => l.is_garnish).map(lineView),
+  };
+});
+
+// Search blob per recipe: every seeded field, accent/case-folded (forward compatible —
+// anything added to the view model's text fields lands here too).
+const searchBlob = (r: (typeof recipeData)[number]) =>
+  normalizeSearch(
+    [
+      r.name,
+      r.micro ?? "",
+      r.type,
+      r.character ?? "",
+      ...r.build.map((l) => l.ingredient),
+      ...r.garnish.map((l) => l.ingredient),
+      ...r.method,
+      r.notes ?? "",
+    ].join("\n"),
+  );
+
+const characters = [
+  ...new Set(recipes.map((r) => r.character).filter((c): c is string => !!c)),
+].sort((a, b) => a.localeCompare(b));
+
+// Guard the inline JSON island against a literal "</script>" in recipe text.
+const recipeJson = JSON.stringify(recipeData).replace(/</g, "\\u003c");
+
+const recipesEmptyText = isAdmin ? "no recipes yet — write down the first one." : "the book's blank.";
+const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "the shelf's bare.";
 ---
 
 <Layout title="Cocktails — grunglebird" active="cocktails">
   <main class="container">
     <h1 class="hero">Cocktails</h1>
 
-    <section class="inventory">
-      <p class="eyebrow">Inventory</p>
+    <section class="catalog">
+      <h2>Recipes</h2>
+      <p class="copy muted">every drink we'd admit to.</p>
+
+      <div class="controls">
+        <div class="search-ic control-grow">
+          <span class="mag">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg>
+          </span>
+          <input type="search" id="recipe-filter" placeholder="Search the book" aria-label="Search recipes" autocomplete="off" />
+        </div>
+        {isAdmin && (
+          <button type="button" class="button add-btn" id="recipe-add">Add more</button>
+        )}
+      </div>
+
+      <div class="table-frame catalog-scroll">
+        <table class="table">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="ascending">
+                <button type="button" class="th-sort" data-key="name">Name</button>
+              </th>
+              <th scope="col" aria-sort="none">
+                <button type="button" class="th-sort" data-key="character">Character</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="recipe-tbody">
+            {recipeData.map((r) => (
+              <tr
+                class="recipe-row row-click"
+                tabindex="0"
+                data-id={r.id}
+                data-name={r.name}
+                data-character={r.character ?? ""}
+                data-search={searchBlob(r)}
+              >
+                <td>{r.name}</td>
+                <td>{r.character ?? "—"}</td>
+              </tr>
+            ))}
+            <tr id="recipe-empty" hidden={recipeData.length > 0}>
+              <td colspan="2" class="muted" id="recipe-empty-msg">{recipesEmptyText}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="catalog">
+      <h2>Inventory</h2>
       <p class="copy muted">everything behind the bar — allegedly in stock.</p>
 
       <div class="controls">
@@ -55,7 +181,7 @@ const priceDollars = (r: IngredientRow): string =>
         )}
       </div>
 
-      <div class="table-frame inv-scroll">
+      <div class="table-frame catalog-scroll">
         <table class="table">
           <thead>
             <tr>
@@ -65,40 +191,146 @@ const priceDollars = (r: IngredientRow): string =>
               <th scope="col" aria-sort="ascending">
                 <button type="button" class="th-sort" data-key="category">Category</button>
               </th>
-              {isAdmin && <th scope="col"></th>}
             </tr>
           </thead>
           <tbody id="ing-tbody">
             {ingredients.map((r) => (
-              <tr class="ing-row" data-name={r.name} data-category={r.category ?? ""}>
+              <tr
+                class:list={["ing-row", isAdmin && "row-click"]}
+                tabindex={isAdmin ? 0 : null}
+                data-id={r.id}
+                data-name={r.name}
+                data-category={r.category ?? ""}
+                data-unit={r.default_unit ?? ""}
+                data-amount={r.purchase_amount ?? ""}
+                data-punit={r.purchase_unit ?? ""}
+                data-price={r.purchase_price_cents == null ? "" : String(r.purchase_price_cents / 100)}
+              >
                 <td>{r.name}</td>
                 <td>{r.category}</td>
-                {isAdmin && (
-                  <td>
-                    <div class="manage">
-                      <button
-                        type="button"
-                        class="button ghost sm js-edit"
-                        data-id={r.id}
-                        data-name={r.name}
-                        data-category={r.category ?? ""}
-                        data-unit={r.default_unit ?? ""}
-                        data-amount={r.purchase_amount ?? ""}
-                        data-punit={r.purchase_unit ?? ""}
-                        data-price={priceDollars(r)}
-                      >Edit</button>
-                    </div>
-                  </td>
-                )}
               </tr>
             ))}
             <tr id="ing-empty" hidden={ingredients.length > 0}>
-              <td colspan={colspan} class="muted" id="ing-empty-msg">{emptyText}</td>
+              <td colspan="2" class="muted" id="ing-empty-msg">{invEmptyText}</td>
             </tr>
           </tbody>
         </table>
       </div>
     </section>
+
+    <script type="application/json" id="recipe-data" set:html={recipeJson} />
+
+    <!-- Recipe modal: view for everyone; admins can flip it in place to the build form. -->
+    <div class="modal-scrim is-hidden" id="recipe-modal" role="dialog" aria-modal="true" aria-labelledby="r-title">
+      <div class="modal recipe-modal">
+        <div class="modal-head">
+          <h2 class="modal-title" id="r-title">Recipe</h2>
+          <button type="button" class="modal-close" id="r-close" aria-label="Close">✕</button>
+        </div>
+
+        <div id="r-view">
+          <p class="r-micro muted" id="r-micro"></p>
+          <ul class="r-lines" id="r-build"></ul>
+          <div id="r-garnish-wrap">
+            <p class="r-garnish-label muted">garnish — optional</p>
+            <ul class="r-lines r-garnish" id="r-garnish"></ul>
+          </div>
+          <div class="r-method" id="r-method"></div>
+          <p class="r-notes muted" id="r-notes"></p>
+          {isAdmin && (
+            <div class="modal-actions">
+              <button type="button" class="button ghost" id="r-edit">Edit</button>
+            </div>
+          )}
+        </div>
+
+        {isAdmin && (
+          <form id="r-form" class="is-hidden">
+            <div class="alert alert-danger is-hidden" id="r-error" role="alert">
+              <span class="alert-icon">!</span>
+              <div><p class="alert-body" id="r-error-msg"></p></div>
+            </div>
+            <div class="field">
+              <label for="r-name">Name</label>
+              <input type="text" id="r-name" required maxlength="80" autocomplete="off" />
+            </div>
+            <div class="field">
+              <label for="r-micro-in">Microcopy</label>
+              <input type="text" id="r-micro-in" maxlength="120" autocomplete="off" />
+              <p class="help">Optional subhead. The bird may speak through you.</p>
+            </div>
+            <div class="field">
+              <label for="r-type">Type</label>
+              <div class="select-wrap">
+                <select id="r-type" required>
+                  {RECIPE_TYPES.map((t) => <option value={t}>{t}</option>)}
+                </select>
+              </div>
+            </div>
+            <div class="field">
+              <label for="r-character">Character</label>
+              <div class="select-wrap">
+                <select id="r-character">
+                  {characters.map((c) => <option value={c}>{c}</option>)}
+                  <option value="__new__">new character…</option>
+                </select>
+              </div>
+              <input type="text" id="r-character-new" class="is-hidden char-new" maxlength="40" placeholder="e.g. mezcal" autocomplete="off" aria-label="New character" />
+              <p class="help">Scanning aid in the table. Drinks only.</p>
+            </div>
+
+            <p class="label">Ingredients</p>
+            <div class="line-box" id="r-build-lines"></div>
+            <button type="button" class="button ghost sm add-line" data-target="r-build-lines">Add line</button>
+
+            <p class="label">Garnish <span class="muted">(optional)</span></p>
+            <div class="line-box" id="r-garnish-lines"></div>
+            <button type="button" class="button ghost sm add-line" data-target="r-garnish-lines">Add garnish</button>
+
+            <div class="field method-field">
+              <label for="r-method-in">Method</label>
+              <textarea id="r-method-in" rows="4" required></textarea>
+              <p class="help">One step per line, in order. No numbers needed.</p>
+            </div>
+            <div class="field">
+              <label for="r-notes-in">Notes</label>
+              <textarea id="r-notes-in" rows="2"></textarea>
+            </div>
+
+            <div class="modal-actions">
+              <button type="button" class="button danger del-action is-hidden" id="r-delete">Delete</button>
+              <button type="button" class="button ghost" id="r-cancel">Cancel</button>
+              <button type="submit" class="button" id="r-save">Save</button>
+            </div>
+          </form>
+        )}
+      </div>
+    </div>
+
+    {isAdmin && (
+      <template id="line-template">
+        <div class="line-row">
+          <input type="number" class="l-amount" min="0" step="any" inputmode="decimal" aria-label="Amount" placeholder="qty" />
+          <div class="select-wrap l-unit-wrap">
+            <select class="l-unit" aria-label="Unit">
+              {UNITS.map((u) => <option value={u}>{u}</option>)}
+            </select>
+          </div>
+          <div class="select-wrap l-ing-wrap">
+            <select class="l-ing" aria-label="Ingredient">
+              {ingredients.map((i) => (
+                <option value={i.id} data-unit={i.default_unit ?? ""}>{i.name}</option>
+              ))}
+            </select>
+          </div>
+          <div class="line-actions">
+            <button type="button" class="button ghost sm l-up" aria-label="Move up">↑</button>
+            <button type="button" class="button ghost sm l-down" aria-label="Move down">↓</button>
+            <button type="button" class="button ghost sm l-remove" aria-label="Remove line">✕</button>
+          </div>
+        </div>
+      </template>
+    )}
 
     {isAdmin && (
       <div class="modal-scrim is-hidden" id="ing-modal" role="dialog" aria-modal="true" aria-labelledby="ing-modal-title">
@@ -157,37 +389,71 @@ const priceDollars = (r: IngredientRow): string =>
   </main>
 
   <script>
-    // --- Browse: client-side filter + header-click sort over the SSR rows (107; cheap) ---
-    const tbody = document.getElementById("ing-tbody");
-    if (tbody) {
-      const rows = Array.from(tbody.querySelectorAll<HTMLTableRowElement>("tr.ing-row"));
-      const emptyRow = document.getElementById("ing-empty") as HTMLTableRowElement | null;
-      const emptyMsg = document.getElementById("ing-empty-msg");
-      const defaultEmptyText = emptyMsg?.textContent ?? "";
-      const search = document.getElementById("filter-name") as HTMLInputElement | null;
-      const headers = Array.from(document.querySelectorAll<HTMLButtonElement>("button.th-sort"));
+    import { NO_QTY_UNITS } from "../lib/ingredients";
+    import { CHARACTER_REQUIRED_TYPES, normalizeSearch } from "../lib/recipes";
 
-      const lc = (s: string | undefined) => (s ?? "").toLowerCase();
-      let sortKey = "category";
+    type RecipeLine = {
+      ingredient_id: number;
+      ingredient: string;
+      amount: number | null;
+      unit: string;
+      amt: string;
+    };
+    type Recipe = {
+      id: number;
+      name: string;
+      micro: string | null;
+      type: string;
+      character: string | null;
+      method: string[];
+      notes: string | null;
+      build: RecipeLine[];
+      garnish: RecipeLine[];
+    };
+
+    const recipeList: Recipe[] = JSON.parse(
+      document.getElementById("recipe-data")?.textContent ?? "[]",
+    );
+    const recipesById = new Map(recipeList.map((r) => [r.id, r]));
+
+    // --- Shared table wiring: filter + header-click sort over SSR rows (both tables) ---
+    function wireTable(opts: {
+      tbodyId: string;
+      rowClass: string;
+      searchId: string;
+      emptyId: string;
+      emptyMsgId: string;
+      defaultKey: string;
+      match: (tr: HTMLTableRowElement, q: string) => boolean;
+    }) {
+      const tbody = document.getElementById(opts.tbodyId);
+      if (!tbody) return;
+      const rows = Array.from(tbody.querySelectorAll<HTMLTableRowElement>(`tr.${opts.rowClass}`));
+      const emptyRow = document.getElementById(opts.emptyId) as HTMLTableRowElement | null;
+      const emptyMsg = document.getElementById(opts.emptyMsgId);
+      const defaultEmptyText = emptyMsg?.textContent ?? "";
+      const search = document.getElementById(opts.searchId) as HTMLInputElement | null;
+      const headers = Array.from(
+        tbody.closest("table")?.querySelectorAll<HTMLButtonElement>("button.th-sort") ?? [],
+      );
+
+      const key = (tr: HTMLTableRowElement, k: string) => normalizeSearch(tr.dataset[k] ?? "");
+      let sortKey = opts.defaultKey;
       let sortDir: "asc" | "desc" = "asc";
 
-      const cmp = (a: HTMLTableRowElement, b: HTMLTableRowElement, key: string) =>
-        lc(a.dataset[key]).localeCompare(lc(b.dataset[key]));
-
       const apply = () => {
-        const q = lc(search?.value).trim();
+        const q = normalizeSearch(search?.value ?? "").trim();
         let visible = 0;
         for (const tr of rows) {
-          // match on any visible column — name or category
-          const match = !q || lc(tr.dataset.name).includes(q) || lc(tr.dataset.category).includes(q);
-          tr.hidden = !match;
-          if (match) visible++;
+          const m = !q || opts.match(tr, q);
+          tr.hidden = !m;
+          if (m) visible++;
         }
 
         const dir = sortDir === "asc" ? 1 : -1;
         const sorted = [...rows].sort((a, b) => {
-          let c = cmp(a, b, sortKey) * dir;
-          if (c === 0 && sortKey !== "name") c = cmp(a, b, "name"); // stable tiebreak by name
+          let c = key(a, sortKey).localeCompare(key(b, sortKey)) * dir;
+          if (c === 0 && sortKey !== "name") c = key(a, "name").localeCompare(key(b, "name"));
           return c;
         });
         for (const tr of sorted) tbody.appendChild(tr);
@@ -197,11 +463,10 @@ const priceDollars = (r: IngredientRow): string =>
             emptyMsg.textContent = visible === 0 ? "nothing matches." : defaultEmptyText;
           }
           emptyRow.hidden = !(rows.length === 0 || visible === 0);
-          tbody.appendChild(emptyRow); // keep the empty row last
+          tbody.appendChild(emptyRow);
         }
       };
 
-      // Reflect the active sort on the headers — aria-sort drives both AT and the ▲/▼ glyph.
       const syncAria = () => {
         for (const btn of headers) {
           btn.closest("th")?.setAttribute(
@@ -213,10 +478,10 @@ const priceDollars = (r: IngredientRow): string =>
 
       for (const btn of headers) {
         btn.addEventListener("click", () => {
-          const key = btn.dataset.key ?? "name";
-          if (key === sortKey) sortDir = sortDir === "asc" ? "desc" : "asc";
+          const k = btn.dataset.key ?? "name";
+          if (k === sortKey) sortDir = sortDir === "asc" ? "desc" : "asc";
           else {
-            sortKey = key;
+            sortKey = k;
             sortDir = "asc";
           }
           syncAria();
@@ -229,7 +494,307 @@ const priceDollars = (r: IngredientRow): string =>
       apply();
     }
 
-    // --- Admin: create / edit / delete via the gated API, then reload to re-render ---
+    wireTable({
+      tbodyId: "recipe-tbody",
+      rowClass: "recipe-row",
+      searchId: "recipe-filter",
+      emptyId: "recipe-empty",
+      emptyMsgId: "recipe-empty-msg",
+      defaultKey: "name",
+      match: (tr, q) => (tr.dataset.search ?? "").includes(q),
+    });
+
+    wireTable({
+      tbodyId: "ing-tbody",
+      rowClass: "ing-row",
+      searchId: "filter-name",
+      emptyId: "ing-empty",
+      emptyMsgId: "ing-empty-msg",
+      defaultKey: "category",
+      match: (tr, q) =>
+        normalizeSearch(tr.dataset.name ?? "").includes(q) ||
+        normalizeSearch(tr.dataset.category ?? "").includes(q),
+    });
+
+    // Row activation helper: click or Enter/Space on the focusable row.
+    function onRowActivate(row: HTMLTableRowElement, fn: () => void) {
+      row.addEventListener("click", fn);
+      row.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          fn();
+        }
+      });
+    }
+
+    // --- Recipe modal: view for everyone, in-place edit/create for admins ---
+    const rModal = document.getElementById("recipe-modal")!;
+    const rView = document.getElementById("r-view")!;
+    const rForm = document.getElementById("r-form") as HTMLFormElement | null;
+    const rTitle = document.getElementById("r-title")!;
+    let current: Recipe | null = null;
+
+    const renderLines = (ul: HTMLElement, lines: RecipeLine[]) => {
+      ul.textContent = "";
+      for (const l of lines) {
+        const li = document.createElement("li");
+        const amt = document.createElement("span");
+        amt.className = "amt";
+        amt.textContent = l.amt;
+        const ing = document.createElement("span");
+        ing.className = "ing";
+        ing.textContent = l.ingredient;
+        li.appendChild(amt);
+        li.appendChild(ing);
+        ul.appendChild(li);
+      }
+    };
+
+    const showView = (r: Recipe) => {
+      current = r;
+      rTitle.textContent = r.name;
+      const micro = document.getElementById("r-micro")!;
+      micro.textContent = r.micro ?? "";
+      micro.hidden = !r.micro;
+      renderLines(document.getElementById("r-build")!, r.build);
+      const garnishWrap = document.getElementById("r-garnish-wrap")!;
+      garnishWrap.hidden = r.garnish.length === 0;
+      renderLines(document.getElementById("r-garnish")!, r.garnish);
+      const method = document.getElementById("r-method")!;
+      method.textContent = "";
+      for (const step of r.method) {
+        const p = document.createElement("p");
+        p.textContent = step;
+        method.appendChild(p);
+      }
+      const notes = document.getElementById("r-notes")!;
+      notes.textContent = r.notes ?? "";
+      notes.hidden = !r.notes;
+      rView.classList.remove("is-hidden");
+      rForm?.classList.add("is-hidden");
+      rModal.classList.remove("is-hidden");
+    };
+
+    const closeRecipeModal = () => {
+      rModal.classList.add("is-hidden");
+      current = null;
+    };
+
+    document.getElementById("r-close")?.addEventListener("click", closeRecipeModal);
+    rModal.addEventListener("click", (e) => {
+      if (e.target === rModal) closeRecipeModal();
+    });
+
+    document.querySelectorAll<HTMLTableRowElement>("tr.recipe-row").forEach((row) => {
+      onRowActivate(row, () => {
+        const r = recipesById.get(Number(row.dataset.id));
+        if (r) showView(r);
+      });
+    });
+
+    // --- Admin: recipe build/edit form inside the same modal ---
+    if (rForm) {
+      const errBox = document.getElementById("r-error")!;
+      const errMsg = document.getElementById("r-error-msg")!;
+      const saveBtn = document.getElementById("r-save") as HTMLButtonElement;
+      const delBtn = document.getElementById("r-delete") as HTMLButtonElement;
+      const template = document.getElementById("line-template") as HTMLTemplateElement;
+      const buildBox = document.getElementById("r-build-lines")!;
+      const garnishBox = document.getElementById("r-garnish-lines")!;
+      const f = {
+        name: document.getElementById("r-name") as HTMLInputElement,
+        micro: document.getElementById("r-micro-in") as HTMLInputElement,
+        type: document.getElementById("r-type") as unknown as HTMLSelectElement,
+        character: document.getElementById("r-character") as unknown as HTMLSelectElement,
+        characterNew: document.getElementById("r-character-new") as HTMLInputElement,
+        method: document.getElementById("r-method-in") as HTMLTextAreaElement,
+        notes: document.getElementById("r-notes-in") as HTMLTextAreaElement,
+      };
+
+      const showError = (msg: string) => {
+        errMsg.textContent = msg;
+        errBox.classList.remove("is-hidden");
+      };
+      const clearError = () => {
+        errBox.classList.add("is-hidden");
+        errMsg.textContent = "";
+      };
+
+      const syncAmountState = (row: HTMLElement) => {
+        const unit = row.querySelector(".l-unit") as unknown as HTMLSelectElement;
+        const amount = row.querySelector(".l-amount") as HTMLInputElement;
+        const noQty = (NO_QTY_UNITS as readonly string[]).includes(unit.value);
+        amount.disabled = noQty;
+        if (noQty) amount.value = "";
+      };
+
+      const addLineRow = (box: HTMLElement, line?: RecipeLine) => {
+        const row = (template.content.cloneNode(true) as DocumentFragment)
+          .firstElementChild as HTMLElement;
+        const ing = row.querySelector(".l-ing") as unknown as HTMLSelectElement;
+        const unit = row.querySelector(".l-unit") as unknown as HTMLSelectElement;
+        const amount = row.querySelector(".l-amount") as HTMLInputElement;
+
+        if (line) {
+          ing.value = String(line.ingredient_id);
+          unit.value = line.unit;
+          amount.value = line.amount == null ? "" : String(line.amount);
+        } else {
+          // new line: pre-fill the unit from the selected ingredient's default
+          unit.value = ing.selectedOptions[0]?.dataset.unit || unit.value;
+        }
+        syncAmountState(row);
+
+        ing.addEventListener("change", () => {
+          const def = ing.selectedOptions[0]?.dataset.unit;
+          if (def) {
+            unit.value = def;
+            syncAmountState(row);
+          }
+        });
+        unit.addEventListener("change", () => syncAmountState(row));
+        // insertBefore (not before/after): Cloudflare's HTMLRewriter Element types
+        // shadow the DOM ones in this script's TS context.
+        row.querySelector(".l-up")?.addEventListener("click", () => {
+          const prev = row.previousElementSibling;
+          if (prev) row.parentElement?.insertBefore(row, prev);
+        });
+        row.querySelector(".l-down")?.addEventListener("click", () => {
+          const next = row.nextElementSibling;
+          if (next) row.parentElement?.insertBefore(next, row);
+        });
+        row.querySelector(".l-remove")?.addEventListener("click", () => row.remove());
+        box.appendChild(row);
+      };
+
+      document.querySelectorAll<HTMLButtonElement>(".add-line").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          const box = document.getElementById(btn.dataset.target ?? "");
+          if (box) addLineRow(box);
+        });
+      });
+
+      const syncCharacterState = () => {
+        const drink = (CHARACTER_REQUIRED_TYPES as readonly string[]).includes(f.type.value);
+        f.character.disabled = !drink;
+        f.characterNew.classList.toggle(
+          "is-hidden",
+          !drink || f.character.value !== "__new__",
+        );
+      };
+      f.type.addEventListener("change", syncCharacterState);
+      f.character.addEventListener("change", syncCharacterState);
+
+      const showForm = (r: Recipe | null) => {
+        clearError();
+        rForm.reset();
+        buildBox.textContent = "";
+        garnishBox.textContent = "";
+        if (r) {
+          rTitle.textContent = "Edit recipe";
+          f.name.value = r.name;
+          f.micro.value = r.micro ?? "";
+          f.type.value = r.type;
+          if (r.character) {
+            const has = [...f.character.options].some((o) => o.value === r.character);
+            if (!has) {
+              const opt = new Option(r.character, r.character);
+              f.character.add(opt, f.character.options.length - 1);
+            }
+            f.character.value = r.character;
+          }
+          f.method.value = r.method.join("\n");
+          f.notes.value = r.notes ?? "";
+          for (const l of r.build) addLineRow(buildBox, l);
+          for (const l of r.garnish) addLineRow(garnishBox, l);
+          delBtn.dataset.id = String(r.id);
+          delBtn.dataset.name = r.name;
+          delBtn.classList.remove("is-hidden");
+        } else {
+          rTitle.textContent = "Add recipe";
+          addLineRow(buildBox);
+          delBtn.classList.add("is-hidden");
+          delete delBtn.dataset.id;
+        }
+        syncCharacterState();
+        rView.classList.add("is-hidden");
+        rForm.classList.remove("is-hidden");
+        rModal.classList.remove("is-hidden");
+        f.name.focus();
+      };
+
+      document.getElementById("r-edit")?.addEventListener("click", () => {
+        if (current) showForm(current);
+      });
+      document.getElementById("recipe-add")?.addEventListener("click", () => showForm(null));
+      document.getElementById("r-cancel")?.addEventListener("click", () => {
+        // editing returns to the view; a fresh create just closes
+        if (current) showView(current);
+        else closeRecipeModal();
+      });
+
+      delBtn.addEventListener("click", async () => {
+        const id = delBtn.dataset.id;
+        if (!id) return;
+        const name = delBtn.dataset.name || "this recipe";
+        if (!confirm(`Delete "${name}"?`)) return;
+        const res = await fetch(`/api/admin/recipes/${id}`, { method: "DELETE" });
+        if (res.ok) location.reload();
+        else alert("Delete failed.");
+      });
+
+      const collectLines = (box: HTMLElement) =>
+        Array.from(box.querySelectorAll<HTMLElement>(".line-row")).map((row) => ({
+          ingredient_id: Number(
+            (row.querySelector(".l-ing") as unknown as HTMLSelectElement).value,
+          ),
+          amount: (row.querySelector(".l-amount") as HTMLInputElement).value,
+          unit: (row.querySelector(".l-unit") as unknown as HTMLSelectElement).value,
+        }));
+
+      rForm.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        clearError();
+        const id = current?.id;
+        const drink = (CHARACTER_REQUIRED_TYPES as readonly string[]).includes(f.type.value);
+        const payload = {
+          name: f.name.value,
+          micro: f.micro.value,
+          type: f.type.value,
+          character: !drink
+            ? ""
+            : f.character.value === "__new__"
+              ? f.characterNew.value
+              : f.character.value,
+          method: f.method.value,
+          notes: f.notes.value,
+          lines: collectLines(buildBox),
+          garnish_lines: collectLines(garnishBox),
+        };
+        saveBtn.disabled = true;
+        try {
+          const res = await fetch(id ? `/api/admin/recipes/${id}` : "/api/admin/recipes", {
+            method: id ? "PATCH" : "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          if (res.ok) {
+            location.reload();
+            return;
+          }
+          const { error } = (await res.json().catch(() => ({ error: "Save failed." }))) as {
+            error?: string;
+          };
+          showError(error ?? "Save failed.");
+        } catch {
+          showError("Network error. Try again.");
+        } finally {
+          saveBtn.disabled = false;
+        }
+      });
+    }
+
+    // --- Admin: ingredient modal (row click opens edit; Add more opens create) ---
     const modal = document.getElementById("ing-modal");
     if (modal) {
       const form = document.getElementById("ing-form") as HTMLFormElement;
@@ -291,12 +856,9 @@ const priceDollars = (r: IngredientRow): string =>
       modal.addEventListener("click", (e) => {
         if (e.target === modal) closeModal();
       });
-      document.addEventListener("keydown", (e) => {
-        if (e.key === "Escape" && !modal.classList.contains("is-hidden")) closeModal();
-      });
 
-      document.querySelectorAll<HTMLButtonElement>(".js-edit").forEach((btn) => {
-        btn.addEventListener("click", () => openModal(btn.dataset));
+      document.querySelectorAll<HTMLTableRowElement>("tr.ing-row").forEach((row) => {
+        onRowActivate(row, () => openModal(row.dataset));
       });
 
       delBtn.addEventListener("click", async () => {
@@ -306,9 +868,15 @@ const priceDollars = (r: IngredientRow): string =>
         if (!id) return;
         const name = delBtn.dataset.name || "this ingredient";
         if (!confirm(`Delete "${name}"?`)) return;
-        const r = await fetch(`/api/admin/ingredients/${id}`, { method: "DELETE" });
-        if (r.ok) location.reload();
-        else alert("Delete failed.");
+        const res = await fetch(`/api/admin/ingredients/${id}`, { method: "DELETE" });
+        if (res.ok) {
+          location.reload();
+          return;
+        }
+        const { error } = (await res.json().catch(() => ({ error: "Delete failed." }))) as {
+          error?: string;
+        };
+        alert(error ?? "Delete failed.");
       });
 
       form.addEventListener("submit", async (e) => {
@@ -325,16 +893,16 @@ const priceDollars = (r: IngredientRow): string =>
         };
         saveBtn.disabled = true;
         try {
-          const r = await fetch(id ? `/api/admin/ingredients/${id}` : "/api/admin/ingredients", {
+          const res = await fetch(id ? `/api/admin/ingredients/${id}` : "/api/admin/ingredients", {
             method: id ? "PATCH" : "POST",
             headers: { "content-type": "application/json" },
             body: JSON.stringify(payload),
           });
-          if (r.ok) {
+          if (res.ok) {
             location.reload();
             return;
           }
-          const { error } = (await r.json().catch(() => ({ error: "Save failed." }))) as {
+          const { error } = (await res.json().catch(() => ({ error: "Save failed." }))) as {
             error?: string;
           };
           showError(error ?? "Save failed.");
@@ -345,12 +913,23 @@ const priceDollars = (r: IngredientRow): string =>
         }
       });
     }
+
+    // One Escape handler for whichever modal is open.
+    document.addEventListener("keydown", (e) => {
+      if (e.key !== "Escape") return;
+      if (!rModal.classList.contains("is-hidden")) closeRecipeModal();
+      const ingModal = document.getElementById("ing-modal");
+      if (ingModal && !ingModal.classList.contains("is-hidden")) {
+        ingModal.classList.add("is-hidden");
+      }
+    });
   </script>
 
   <style>
-    /* Layout only — composes the shared .search-ic / .table / .modal / .alert / .button /
-       .eyebrow primitives from markup; this block never re-styles them (see docs/styling.md). */
-    .inventory {
+    /* Layout only — composes the shared .table / .modal / .alert / .button / .field /
+       .select-wrap primitives from markup; this block never re-styles them (see
+       docs/styling.md). */
+    .catalog {
       margin-top: var(--space-xl);
     }
     .controls {
@@ -367,7 +946,7 @@ const priceDollars = (r: IngredientRow): string =>
       margin-left: auto;
     }
     /* opt-in cap on the shared .table-frame: a few rows, then sticky header + body scroll */
-    .inv-scroll {
+    .catalog-scroll {
       --table-max-block: 16rem;
     }
     /* sortable header: a plain text button (not the .button primitive) inside the th */
@@ -391,9 +970,102 @@ const priceDollars = (r: IngredientRow): string =>
     th[aria-sort="descending"] .th-sort::after {
       content: "▼";
     }
-    .manage {
+    .row-click {
+      cursor: pointer;
+    }
+
+    /* recipe modal: taller content than the shared default, so cap + scroll the instance */
+    .recipe-modal {
+      max-block-size: calc(100dvh - 2 * var(--space-lg));
+      overflow-y: auto;
+    }
+    /* view mode: ingredient list framed by hairlines, amounts in the accent column —
+       same arrangement as the home-page recipe card */
+    .r-micro {
+      font-style: italic;
+      margin: 0 0 var(--space-sm);
+    }
+    .r-lines {
+      list-style: none;
+      padding: var(--space-sm) 0;
+      margin: 0;
+      border-top: 1px solid var(--hair);
+    }
+    .r-lines li {
+      display: flex;
+      gap: var(--space-sm);
+      padding: var(--space-2xs) 0;
+    }
+    .r-lines .amt {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      width: 90px; /* amount + unit column — layout one-off, matches the home card idea */
+      text-align: right;
+      flex: 0 0 auto;
+    }
+    .r-lines .ing {
+      color: var(--text);
+    }
+    .r-garnish-label {
+      font-size: var(--text-sm);
+      margin: 0;
+      padding-top: var(--space-xs);
+      border-top: 1px solid var(--hair);
+    }
+    .r-garnish-label + .r-lines,
+    #r-garnish-wrap .r-lines {
+      border-top: 0;
+      padding-top: 0;
+    }
+    .r-method {
+      border-top: 1px solid var(--hair);
+      padding-top: var(--space-sm);
+    }
+    .r-method p {
+      margin: 0 0 var(--space-2xs);
+    }
+    .r-notes {
+      font-size: var(--text-sm);
+      margin: var(--space-sm) 0 0;
+    }
+
+    /* edit mode: a line is amount | unit | ingredient | reorder controls */
+    .line-box {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-xs);
+      margin-bottom: var(--space-xs);
+    }
+    .line-row {
       display: flex;
       gap: var(--space-xs);
+      align-items: center;
+      flex-wrap: wrap;
+    }
+    .line-row .l-amount {
+      flex: 0 0 5rem;
+      min-width: 0;
+    }
+    .line-row .l-unit-wrap {
+      flex: 0 0 auto;
+    }
+    .line-row .l-ing-wrap {
+      flex: 1 1 10rem;
+      min-width: 0;
+    }
+    .line-actions {
+      display: flex;
+      gap: var(--space-2xs);
+      margin-left: auto;
+    }
+    .add-line {
+      margin-bottom: var(--space-md);
+    }
+    .method-field {
+      margin-top: var(--space-md);
+    }
+    .char-new {
+      margin-top: var(--space-xs);
     }
     /* float the modal's destructive action away from Save to avoid a mis-click */
     .del-action {

@@ -4,9 +4,12 @@
 // this list — it's how a bottle is *bought* (ml, bag, …), not a recipe-line unit.
 export const UNITS = [
   'oz', 'g', 'ml', 'tsp', 'dash', 'drop', 'pinch', 'each', 'rinse', 'rim', 'sprig',
-  'peel', 'twist', 'wheel', 'slice', 'wedge',
+  'twist', 'wheel', 'slice', 'wedge', 'leaf',
 ] as const;
 export type Unit = (typeof UNITS)[number];
+
+/** Units that never carry an amount — the recipe form disables qty for these. */
+export const NO_QTY_UNITS = ['rinse', 'rim', 'twist'] as const;
 
 /** Normalized, validated ingredient fields. `price_updated_at` is set by the route, not here
  *  (it depends on whether the price actually changed, which only the handler knows). */
