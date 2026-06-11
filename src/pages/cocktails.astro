@@ -117,7 +117,7 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
 
     <section class="catalog">
       <h2>Recipes</h2>
-      <p class="copy muted">every drink we'd admit to.</p>
+      <p class="copy muted">every drink we'd admit to</p>
 
       <div class="controls">
         <div class="search-ic control-grow">
@@ -167,7 +167,7 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
 
     <section class="catalog">
       <h2>Inventory</h2>
-      <p class="copy muted">everything behind the bar — allegedly in stock.</p>
+      <p class="copy muted">everything behind the bar — allegedly in stock</p>
 
       <div class="controls">
         <div class="search-ic control-grow">
@@ -235,7 +235,7 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
           <p class="r-notes muted" id="r-notes"></p>
           {isAdmin && (
             <div class="modal-actions">
-              <button type="button" class="button ghost" id="r-edit">Edit</button>
+              <button type="button" class="button ghost sm" id="r-edit">Edit</button>
             </div>
           )}
         </div>
@@ -253,40 +253,39 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
             <div class="field">
               <label for="r-micro-in">Microcopy</label>
               <input type="text" id="r-micro-in" maxlength="120" autocomplete="off" />
-              <p class="help">Optional subhead. The bird may speak through you.</p>
             </div>
-            <div class="field">
-              <label for="r-type">Type</label>
-              <div class="select-wrap">
-                <select id="r-type" required>
-                  {RECIPE_TYPES.map((t) => <option value={t}>{t}</option>)}
-                </select>
+            <div class="pair">
+              <div class="field">
+                <label for="r-type">Type</label>
+                <div class="select-wrap">
+                  <select id="r-type" required>
+                    {RECIPE_TYPES.map((t) => <option value={t}>{t}</option>)}
+                  </select>
+                </div>
               </div>
-            </div>
-            <div class="field">
-              <label for="r-character">Character</label>
-              <div class="select-wrap">
-                <select id="r-character">
-                  {characters.map((c) => <option value={c}>{c}</option>)}
-                  <option value="__new__">new character…</option>
-                </select>
+              <div class="field">
+                <label for="r-character">Character</label>
+                <div class="select-wrap">
+                  <select id="r-character">
+                    {characters.map((c) => <option value={c}>{c}</option>)}
+                    <option value="__new__">new character…</option>
+                  </select>
+                </div>
+                <input type="text" id="r-character-new" class="is-hidden char-new" maxlength="40" placeholder="e.g. mezcal" autocomplete="off" aria-label="New character" />
               </div>
-              <input type="text" id="r-character-new" class="is-hidden char-new" maxlength="40" placeholder="e.g. mezcal" autocomplete="off" aria-label="New character" />
-              <p class="help">Scanning aid in the table. Drinks only.</p>
             </div>
 
             <p class="label">Ingredients</p>
             <div class="line-box" id="r-build-lines"></div>
-            <button type="button" class="button ghost sm add-line" data-target="r-build-lines">Add line</button>
+            <button type="button" class="button ghost sm add-line" data-target="r-build-lines">+ add</button>
 
             <p class="label">Garnish <span class="muted">(optional)</span></p>
             <div class="line-box" id="r-garnish-lines"></div>
-            <button type="button" class="button ghost sm add-line" data-target="r-garnish-lines">Add garnish</button>
+            <button type="button" class="button ghost sm add-line" data-target="r-garnish-lines">+ add</button>
 
             <div class="field method-field">
               <label for="r-method-in">Method</label>
-              <textarea id="r-method-in" rows="4" required></textarea>
-              <p class="help">One step per line, in order. No numbers needed.</p>
+              <textarea id="r-method-in" rows="4" required placeholder="Shake with ice. Strain. Serve up."></textarea>
             </div>
             <div class="field">
               <label for="r-notes-in">Notes</label>
@@ -306,26 +305,34 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
     {isAdmin && (
       <template id="line-template">
         <div class="line-row">
+          <span class="l-drag" title="Drag to reorder" aria-hidden="true">⠿</span>
           <input type="number" class="l-amount" min="0" step="any" inputmode="decimal" aria-label="Amount" placeholder="qty" />
           <div class="select-wrap l-unit-wrap">
             <select class="l-unit" aria-label="Unit">
               {UNITS.map((u) => <option value={u}>{u}</option>)}
             </select>
           </div>
-          <div class="select-wrap l-ing-wrap">
-            <select class="l-ing" aria-label="Ingredient">
-              {ingredients.map((i) => (
-                <option value={i.id} data-unit={i.default_unit ?? ""}>{i.name}</option>
-              ))}
-            </select>
+          <div class="l-ing-box">
+            <input type="text" class="l-ing" placeholder="ingredient" autocomplete="off" aria-label="Ingredient" />
+            <ul class="l-ing-results is-hidden"></ul>
           </div>
-          <div class="line-actions">
-            <button type="button" class="button ghost sm l-up" aria-label="Move up">↑</button>
-            <button type="button" class="button ghost sm l-down" aria-label="Move down">↓</button>
-            <button type="button" class="button ghost sm l-remove" aria-label="Remove line">✕</button>
-          </div>
+          <button type="button" class="button ghost sm l-remove" aria-label="Remove line">✕</button>
         </div>
       </template>
+    )}
+    {isAdmin && (
+      <script
+        type="application/json"
+        id="ing-data"
+        set:html={JSON.stringify(
+          ingredients.map((i) => ({
+            id: i.id,
+            name: i.name,
+            category: i.category,
+            default_unit: i.default_unit,
+          })),
+        ).replace(/</g, "\\u003c")}
+      />
     )}
 
     {isAdmin && (
@@ -349,7 +356,6 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
               <label for="f-category">Category</label>
               <input type="text" id="f-category" required maxlength="40" list="cat-list" autocomplete="off" />
               <datalist id="cat-list">{categories.map((c) => <option value={c}></option>)}</datalist>
-              <p class="help">Search label — e.g. rum, syrup, bitters.</p>
             </div>
             <div class="field">
               <label for="f-unit">Default unit</label>
@@ -358,7 +364,6 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
                   {UNITS.map((u) => <option value={u}>{u}</option>)}
                 </select>
               </div>
-              <p class="help">Pre-fills a recipe line; still overridable there.</p>
             </div>
             <p class="label price-head">Price fallback <span class="muted">(optional)</span></p>
             <div class="field">
@@ -625,11 +630,27 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
       const showError = (msg: string) => {
         errMsg.textContent = msg;
         errBox.classList.remove("is-hidden");
+        // the form can be taller than the modal's scroll viewport — bring the error to the reader
+        errBox.scrollIntoView({ block: "nearest", behavior: "smooth" });
       };
       const clearError = () => {
         errBox.classList.add("is-hidden");
         errMsg.textContent = "";
       };
+
+      // ingredient data for the typeahead: exact-name index for resolution + a
+      // search key over name AND category, mirroring the inventory filter
+      // ("rum" surfaces Planteray OFTD).
+      type Ing = { id: number; name: string; category: string | null; default_unit: string | null };
+      const ingredientList: Ing[] = JSON.parse(
+        document.getElementById("ing-data")?.textContent ?? "[]",
+      );
+      const ingIndex = new Map<string, Ing>();
+      const ingSearch = ingredientList.map((i) => ({
+        key: normalizeSearch(`${i.name} ${i.category ?? ""}`),
+        ing: i,
+      }));
+      for (const i of ingredientList) ingIndex.set(normalizeSearch(i.name), i);
 
       const syncAmountState = (row: HTMLElement) => {
         const unit = row.querySelector(".l-unit") as unknown as HTMLSelectElement;
@@ -642,38 +663,110 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
       const addLineRow = (box: HTMLElement, line?: RecipeLine) => {
         const row = (template.content.cloneNode(true) as DocumentFragment)
           .firstElementChild as HTMLElement;
-        const ing = row.querySelector(".l-ing") as unknown as HTMLSelectElement;
+        const ing = row.querySelector(".l-ing") as HTMLInputElement;
+        const results = row.querySelector(".l-ing-results") as HTMLElement;
         const unit = row.querySelector(".l-unit") as unknown as HTMLSelectElement;
         const amount = row.querySelector(".l-amount") as HTMLInputElement;
 
         if (line) {
-          ing.value = String(line.ingredient_id);
+          ing.value = line.ingredient;
           unit.value = line.unit;
           amount.value = line.amount == null ? "" : String(line.amount);
-        } else {
-          // new line: pre-fill the unit from the selected ingredient's default
-          unit.value = ing.selectedOptions[0]?.dataset.unit || unit.value;
         }
         syncAmountState(row);
 
-        ing.addEventListener("change", () => {
-          const def = ing.selectedOptions[0]?.dataset.unit;
-          if (def) {
-            unit.value = def;
+        // --- ingredient typeahead: searches name + category like the inventory filter ---
+        const hideResults = () => results.classList.add("is-hidden");
+        const pick = (i: Ing) => {
+          ing.value = i.name;
+          hideResults();
+          if (i.default_unit) {
+            unit.value = i.default_unit;
             syncAmountState(row);
+          }
+        };
+        const renderResults = () => {
+          const q = normalizeSearch(ing.value.trim());
+          results.textContent = "";
+          if (!q) {
+            hideResults();
+            return;
+          }
+          const hits = ingSearch.filter((s) => s.key.includes(q)).slice(0, 8);
+          if (hits.length === 0) {
+            hideResults();
+            return;
+          }
+          for (const { ing: i } of hits) {
+            const li = document.createElement("li");
+            const name = document.createElement("span");
+            name.textContent = i.name;
+            const cat = document.createElement("span");
+            cat.className = "muted";
+            cat.textContent = i.category ?? "";
+            li.appendChild(name);
+            li.appendChild(cat);
+            // pointerdown beats the input's blur, on mouse and touch alike
+            li.addEventListener("pointerdown", (e) => {
+              e.preventDefault();
+              pick(i);
+            });
+            results.appendChild(li);
+          }
+          results.classList.remove("is-hidden");
+        };
+        ing.addEventListener("input", renderResults);
+        ing.addEventListener("focus", renderResults);
+        ing.addEventListener("blur", hideResults);
+        ing.addEventListener("keydown", (e) => {
+          if (results.classList.contains("is-hidden")) return;
+          if (e.key === "Enter") {
+            e.preventDefault();
+            const q = normalizeSearch(ing.value.trim());
+            const first = ingSearch.find((s) => s.key.includes(q));
+            if (first) pick(first.ing);
+          } else if (e.key === "Escape") {
+            // consume it: closing the dropdown must not close the modal
+            e.preventDefault();
+            e.stopPropagation();
+            hideResults();
           }
         });
         unit.addEventListener("change", () => syncAmountState(row));
-        // insertBefore (not before/after): Cloudflare's HTMLRewriter Element types
-        // shadow the DOM ones in this script's TS context.
-        row.querySelector(".l-up")?.addEventListener("click", () => {
-          const prev = row.previousElementSibling;
-          if (prev) row.parentElement?.insertBefore(row, prev);
+
+        // --- drag-to-reorder via pointer events (works for mouse AND touch);
+        // rows stay in their own section. insertBefore, not before/after:
+        // Cloudflare's HTMLRewriter Element types shadow the DOM ones here. ---
+        const handle = row.querySelector(".l-drag") as HTMLElement;
+        handle.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          row.classList.add("dragging");
+          // listen on window, not the handle: browsers drop pointer capture when the
+          // captured element is moved in the DOM, which froze the drag after one swap
+          const onMove = (ev: PointerEvent) => {
+            const siblings = (
+              Array.from(box.querySelectorAll(".line-row")) as HTMLElement[]
+            ).filter((r) => r !== row);
+            const next = siblings.find(
+              (r) => ev.clientY < r.getBoundingClientRect().top + r.offsetHeight / 2,
+            );
+            if (next) {
+              if (next !== row.nextElementSibling) box.insertBefore(row, next);
+            } else if (box.lastElementChild !== row) {
+              box.appendChild(row);
+            }
+          };
+          const end = () => {
+            row.classList.remove("dragging");
+            window.removeEventListener("pointermove", onMove);
+            window.removeEventListener("pointerup", end);
+            window.removeEventListener("pointercancel", end);
+          };
+          window.addEventListener("pointermove", onMove);
+          window.addEventListener("pointerup", end);
+          window.addEventListener("pointercancel", end);
         });
-        row.querySelector(".l-down")?.addEventListener("click", () => {
-          const next = row.nextElementSibling;
-          if (next) row.parentElement?.insertBefore(next, row);
-        });
+
         row.querySelector(".l-remove")?.addEventListener("click", () => row.remove());
         box.appendChild(row);
       };
@@ -755,18 +848,43 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
         else alert("Delete failed.");
       });
 
-      const collectLines = (box: HTMLElement) =>
-        Array.from(box.querySelectorAll<HTMLElement>(".line-row")).map((row) => ({
-          ingredient_id: Number(
-            (row.querySelector(".l-ing") as unknown as HTMLSelectElement).value,
-          ),
-          amount: (row.querySelector(".l-amount") as HTMLInputElement).value,
-          unit: (row.querySelector(".l-unit") as unknown as HTMLSelectElement).value,
-        }));
+      type CollectedLines =
+        | { lines: { ingredient_id: number; amount: string; unit: string }[] }
+        | { error: string };
+      const collectLines = (box: HTMLElement): CollectedLines => {
+        const lines = [];
+        for (const row of box.querySelectorAll<HTMLElement>(".line-row")) {
+          const name = (row.querySelector(".l-ing") as HTMLInputElement).value.trim();
+          const hit = ingIndex.get(normalizeSearch(name));
+          if (!hit) {
+            return {
+              error: name
+                ? `"${name}" isn't in the inventory — pick an ingredient from the list.`
+                : "Every line needs an ingredient from the list.",
+            };
+          }
+          lines.push({
+            ingredient_id: hit.id,
+            amount: (row.querySelector(".l-amount") as HTMLInputElement).value,
+            unit: (row.querySelector(".l-unit") as unknown as HTMLSelectElement).value,
+          });
+        }
+        return { lines };
+      };
 
       rForm.addEventListener("submit", async (e) => {
         e.preventDefault();
         clearError();
+        const build = collectLines(buildBox);
+        if ("error" in build) {
+          showError(build.error);
+          return;
+        }
+        const garnish = collectLines(garnishBox);
+        if ("error" in garnish) {
+          showError(garnish.error);
+          return;
+        }
         const id = current?.id;
         const drink = (CHARACTER_REQUIRED_TYPES as readonly string[]).includes(f.type.value);
         const payload = {
@@ -780,8 +898,8 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
               : f.character.value,
           method: f.method.value,
           notes: f.notes.value,
-          lines: collectLines(buildBox),
-          garnish_lines: collectLines(garnishBox),
+          lines: build.lines,
+          garnish_lines: garnish.lines,
         };
         saveBtn.disabled = true;
         try {
@@ -1049,7 +1167,7 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
     .r-lines :global(li.sep) {
       display: block;
       grid-column: 1 / -1;
-      border-top: 1px solid var(--hair);
+      border-top: 2px solid var(--hair);
       width: 75%;
       margin: var(--space-2xs) auto;
     }
@@ -1076,33 +1194,88 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
       gap: var(--space-xs);
       margin-bottom: var(--space-xs);
     }
+    /* two related selects share a row */
+    .pair {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--space-sm);
+    }
+    .add-line {
+      margin-bottom: var(--space-md);
+    }
+    /* one line per row: handle | qty | unit | ingredient | ✕ */
     .line-row {
       display: flex;
       gap: var(--space-xs);
       align-items: center;
-      flex-wrap: wrap;
+    }
+    .line-row.dragging {
+      opacity: 0.6;
+    }
+    .l-drag {
+      flex: none;
+      cursor: grab;
+      color: var(--muted);
+      user-select: none;
+      touch-action: none; /* the handle must not scroll the page mid-drag on touch */
     }
     .line-row .l-amount {
-      flex: 0 0 5rem;
+      flex: 0 0 4.5rem;
       min-width: 0;
     }
     .line-row .l-unit-wrap {
       flex: 0 0 auto;
     }
-    .line-row .l-ing-wrap {
-      flex: 1 1 10rem;
+    .line-row .l-ing-box {
+      position: relative;
+      flex: 1 1 6rem;
       min-width: 0;
     }
-    .line-actions {
-      display: flex;
-      gap: var(--space-2xs);
-      margin-left: auto;
+    .line-row .l-ing {
+      width: 100%;
     }
-    .add-line {
-      margin-bottom: var(--space-md);
+    .line-row .l-remove {
+      flex: none;
+    }
+    /* typeahead results float under their input */
+    .l-ing-results {
+      position: absolute;
+      inset-block-start: 100%;
+      inset-inline: 0;
+      z-index: 10;
+      margin: var(--space-2xs) 0 0;
+      padding: var(--space-2xs);
+      list-style: none;
+      background: var(--surface);
+      border: 1px solid var(--hair);
+      border-radius: var(--radius-md);
+      max-block-size: 14rem;
+      overflow-y: auto;
+    }
+    /* result rows are script-built — :global(), or the scoped rules miss them */
+    .l-ing-results :global(li) {
+      display: flex;
+      justify-content: space-between;
+      gap: var(--space-sm);
+      padding: var(--space-2xs) var(--space-xs);
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+    }
+    .l-ing-results :global(li:hover) {
+      background: color-mix(in srgb, var(--text) 10%, var(--surface));
     }
     .method-field {
       margin-top: var(--space-md);
+    }
+    /* narrow screens: controlled wrap — ingredient search gets its own full line */
+    @media (max-width: 480px) {
+      .line-row {
+        flex-wrap: wrap;
+      }
+      .line-row .l-ing-box {
+        flex: 1 1 100%;
+        order: 9;
+      }
     }
     .char-new {
       margin-top: var(--space-xs);
