@@ -1,52 +1,59 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 
-const milestones = [
+// Drink names mirror the recipe DB; ingredient lists mirror it too (garnishes
+// omitted) but are shortened for display: "juice"/"syrup"/"bitters" dropped,
+// brand rums genericized (Planteray OFTD → dark rum, Smith & Cross → Jamaican
+// rum). Old Fashioned and the Mocktails aren't in the DB yet; those are hand-kept.
+const menu = [
   {
-    amount: 500,
-    label: 'Bottom shelf',
-    desc: 'Cheap ingredients to take us through most of the week. Premium cocktails will be cut.',
+    title: 'Favorites',
+    drinks: [
+      { name: 'Espresso Martini', ingredients: ['demerara', 'dark rum', 'coffee liqueur', 'espresso'] },
+      { name: 'Margarita', ingredients: ['lime', 'Cointreau', 'tequila blanco'] },
+      { name: 'Daiquiri', ingredients: ['simple', 'lime', 'light rum'] },
+    ],
   },
   {
-    amount: 750,
-    label: 'Middle shelf',
-    desc: "The comfy zone. Should get us through the week without any cuts.",
+    title: 'Tiki',
+    drinks: [
+      { name: 'Mai Tai', ingredients: ['demerara', 'orgeat', 'dry curaçao', 'lime', 'aged Jamaican rum'] },
+      { name: 'Grungle Bird', ingredients: ['demerara', 'lime', 'grapefruit', 'Campari', 'dark rum', 'Jamaican rum'] },
+      { name: "Mike's Painkiller", ingredients: ['cream of coconut', 'orange', 'pineapple', 'demerara rum'] },
+      { name: 'Ancient Mariner', ingredients: ['simple', 'lime', 'grapefruit', 'allspice dram', 'aged Jamaican rum', 'demerara rum'] },
+      { name: 'Pampanito', ingredients: ['demerara', 'lemon', 'allspice dram', 'dark rum', 'Angostura', 'club soda'] },
+      { name: "Lauwiliwilinukunuku'oi'oi", ingredients: ['orgeat', 'lemon', 'pineapple', 'aged Jamaican rum', "Peychaud's"] },
+      { name: 'Humuhumunukunukuāpuaʻa', ingredients: ['orgeat', 'lemon', 'pineapple', 'gin', "Peychaud's"] },
+    ],
   },
   {
-    amount: 1000,
-    label: 'Top shelf',
-    desc: 'Premium ingredients, plus some off-menu specials and/or a punch-bowl night!',
+    title: 'Classics',
+    drinks: [
+      { name: 'Paloma', ingredients: ['lime', 'tequila blanco', 'grapefruit soda'] },
+      { name: 'Ranch Water', ingredients: ['lime', 'tequila blanco', 'club soda'] },
+      { name: 'Tom Collins', ingredients: ['simple', 'lemon', 'gin', 'club soda'] },
+      { name: 'Old Fashioned', ingredients: ['demerara', 'bourbon', 'Angostura'] },
+      { name: 'Martini', ingredients: ['gin', 'dry vermouth'] },
+      { name: 'Negroni', ingredients: ['gin', 'sweet vermouth', 'Campari'] },
+    ],
+  },
+  {
+    title: 'Mocktails',
+    drinks: [
+      { name: 'Ginger and Juice', ingredients: ['pineapple', 'lime', 'demerara', 'spicy ginger beer'] },
+      { name: 'The Hedge', ingredients: ['strawberry lemon shrub', 'soda water', 'bitters', 'mint'] },
+      { name: 'House Salad', ingredients: ['cucumber', 'mint', 'lime', 'simple', 'tonic'] },
+    ],
   },
 ];
 
-const suggested = [
-  { amount: 12, drinks: 'covers about 4 drinks', alt: 'one bottle of Crude Tropi-500 bitters.' },
-  { amount: 28, drinks: 'covers about 9 drinks', alt: "one bottle of Pusser's Rum.", featured: true },
-  { amount: 48, drinks: 'covers about 16 drinks', alt: 'a handle of Olmeca Altos Plata Tequila.', featured: true },
-  { amount: 60, drinks: 'covers about 20 drinks', alt: 'a bottle of Amaro Nonino Quintessentia.' },
-  { amount: 100, drinks: 'covers about 33 drinks', alt: 'a set of Jamaican rums: Coruba, Smith & Cross, and Appleton 12 year Rare Casks.' },
-  { amount: 150, drinks: 'covers about 50 drinks', alt: 'ALL of the non-alcoholic ingredients.' },
-];
-
-const tikiDrinks = [
-  'Mai Tai',
-  'Grungle Bird',
-  'Painkiller',
-  'Ancient Mariner',
-  'Pampanito',
-  "Lauwiliwilinukunukuʻoiʻoi",
-  "Humuhumunukunukuapuaʻa",
-];
-
-const crowdFavorites = ['Espresso Martini', 'Margarita', 'Daiquiri'];
-
-const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Martini', 'Negroni'];
+const venmoUrl = 'https://venmo.com/u/mruedinger';
 ---
 
 <Layout
   theme="beach"
   title="Mike's Beach Bar"
-  description="Help fund Mike's Beach Bar for our summer beach trip."
+  description="The menu at Mike's Beach Bar."
   active="events"
 >
   <link
@@ -58,374 +65,111 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
   <main class="container event-poster">
     <header>
       <h1>Mike's Beach Bar</h1>
-      <p>
-        Last year's inaugural run of Mike's Beach Bar was a resounding success.
-        <br />
-        Mike is ready to mix things up again, and needs your help to stock the bar!
-      </p>
+      <p class="tagline">we'll try to keep the sand out of your drink</p>
     </header>
+
+    <section>
+      <h2>Donate</h2>
+      <p>
+        Help cover the cost of ingredients — excess goes to charity.
+        <br />
+        Suggested donation $3 per drink
+      </p>
+
+      <div class="venmo poster-panel">
+        <svg
+          class="venmo-qr"
+          role="img"
+          aria-label="QR code linking to Mike's Venmo profile"
+          xmlns="http://www.w3.org/2000/svg"
+          viewBox="0 0 37 37"
+          shape-rendering="crispEdges"
+        >
+          <path fill="#ffffff" d="M0 0h37v37H0z"/>
+          <path stroke="var(--poster-ink)" d="M4 4.5h7m2 0h1m2 0h4m3 0h2m1 0h7M4 5.5h1m5 0h1m4 0h6m5 0h1m5 0h1M4 6.5h1m1 0h3m1 0h1m1 0h1m1 0h2m1 0h1m1 0h1m3 0h1m2 0h1m1 0h3m1 0h1M4 7.5h1m1 0h3m1 0h1m1 0h2m4 0h2m1 0h1m2 0h1m1 0h1m1 0h3m1 0h1M4 8.5h1m1 0h3m1 0h1m1 0h1m3 0h1m2 0h2m1 0h3m1 0h1m1 0h3m1 0h1M4 9.5h1m5 0h1m1 0h2m10 0h1m1 0h1m5 0h1M4 10.5h7m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h1m1 0h7M12 11.5h1m2 0h2m1 0h1m1 0h1m3 0h1M4 12.5h1m1 0h5m2 0h4m3 0h2m1 0h1m2 0h5M4 13.5h1m1 0h2m6 0h1m2 0h3m2 0h7m3 0h1M5 14.5h1m1 0h1m1 0h2m1 0h3m1 0h5m3 0h1m1 0h3M4 15.5h1m1 0h1m1 0h1m2 0h1m2 0h1m1 0h2m1 0h1m2 0h3m1 0h2m1 0h1m1 0h1M4 16.5h3m3 0h4m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1m3 0h2M5 17.5h1m1 0h3m1 0h1m2 0h2m3 0h5m1 0h4m3 0h1M4 18.5h4m1 0h2m5 0h1m5 0h1m1 0h1m1 0h1m2 0h2M5 19.5h1m2 0h1m2 0h1m1 0h2m1 0h1m1 0h1m1 0h1m3 0h4m3 0h1M4 20.5h2m2 0h9m3 0h2m2 0h1m4 0h2M4 21.5h1m1 0h1m5 0h1m3 0h4m1 0h8m1 0h1m1 0h1M4 22.5h1m1 0h1m1 0h6m1 0h7m2 0h2m1 0h2m1 0h1M4 23.5h1m2 0h3m3 0h2m2 0h1m1 0h1m2 0h3m1 0h3m2 0h1M4 24.5h1m2 0h6m1 0h3m1 0h2m1 0h1m1 0h6m1 0h3M12 25.5h2m1 0h1m3 0h2m1 0h1m1 0h1m3 0h5M4 26.5h7m10 0h1m1 0h2m1 0h1m1 0h3M4 27.5h1m5 0h1m1 0h1m2 0h1m2 0h1m1 0h1m3 0h1m3 0h1m2 0h2M4 28.5h1m1 0h3m1 0h1m1 0h4m5 0h1m2 0h5m1 0h1m1 0h1M4 29.5h1m1 0h3m1 0h1m1 0h1m2 0h5m2 0h2m5 0h2M4 30.5h1m1 0h3m1 0h1m1 0h1m1 0h6m3 0h9M4 31.5h1m5 0h1m2 0h1m4 0h1m5 0h1m1 0h1m2 0h1m1 0h1M4 32.5h7m1 0h3m1 0h2m1 0h3m1 0h1m2 0h5"/>
+        </svg>
+        <a class="poster-btn" href={venmoUrl} target="_blank" rel="noopener">Venmo @mruedinger</a>
+      </div>
+    </section>
 
     <section>
       <h2>The Menu</h2>
 
-      <div class="menu-cards">
-        <article class="menu-card">
-          <h3>Favorites</h3>
-          <ul>{crowdFavorites.map((d) => <li>{d}</li>)}</ul>
-        </article>
-        <article class="menu-card">
-          <h3>Tiki</h3>
-          <ul>{tikiDrinks.map((d) => <li>{d}</li>)}</ul>
-        </article>
-        <article class="menu-card">
-          <h3>Classics</h3>
-          <ul>{classics.map((d) => <li>{d}</li>)}</ul>
-        </article>
-      </div>
+      <article class="menu-card">
+        {menu.map((group) => (
+          <Fragment>
+            <h3>{group.title}</h3>
+            <ul>
+              {group.drinks.map((d) => (
+                <li>
+                  <strong>{d.name}</strong>
+                  <span class="menu-ingredients">
+                    {d.ingredients.map((ing, i) => (
+                      <Fragment>{i > 0 && ' · '}<span class="ing">{ing}</span></Fragment>
+                    ))}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </Fragment>
+        ))}
+      </article>
 
       <p class="poster-muted">(and more!)</p>
     </section>
-
-    <section>
-      <h2>The Goal</h2>
-      <p>
-        Mike's accountant, Matt, has done
-        <a
-          href="https://docs.google.com/spreadsheets/d/1NgRxtqVga8s14sL5x3Kvozcg2tsxMTsXjyrhqqeBDgc/edit?usp=sharing"
-          target="_blank"
-          rel="noopener"
-        >the math</a>
-        <br />
-        Here's how your contributions have helped so far
-      </p>
-
-      <div id="meter" class="meter poster-panel" data-milestones={JSON.stringify(milestones)}>
-        <div class="meter-bar">
-          <div class="meter-fill" style="width:0%"></div>
-          {milestones.map((m) => (
-            <div class="meter-marker" data-amount={m.amount}>
-              <span>${m.amount}</span>
-            </div>
-          ))}
-        </div>
-        <p class="meter-status poster-muted">Loading current pledges…</p>
-      </div>
-
-      <ul class="milestones">
-        {[...milestones].reverse().map((m) => (
-          <li>
-            <strong>${m.amount} — {m.label}</strong>
-            <br />
-            {m.desc}
-          </li>
-        ))}
-      </ul>
-    </section>
-
-    <section>
-      <h2>Suggested donations</h2>
-      <p class="poster-muted">Click an amount to fill in the pledge form below</p>
-      <div class="donations">
-        {suggested.map((s) => (
-          <button
-            type="button"
-            class={`donation ${s.featured ? 'featured' : ''}`}
-            data-amount={s.amount}
-          >
-            <div class="donation-amount">${s.amount}</div>
-            <div class="donation-desc">
-              {s.drinks}<br />
-              -- or --<br />
-              {s.alt}
-            </div>
-          </button>
-        ))}
-      </div>
-    </section>
-
-    <section id="pledge-section">
-      <h2>Contribute</h2>
-      <p class="poster-muted">
-        Pay what you can - Mike's bar will exist no matter what, but with your help it'll be even more awesome
-      </p>
-
-      <div id="my-pledge-banner" class="poster-panel banner" hidden>
-        <p>
-          You pledged <strong id="my-pledge-amount"></strong> as
-          <strong id="my-pledge-name"></strong>.
-        </p>
-        <div class="banner-actions">
-          <button type="button" id="my-pledge-edit" class="poster-btn">Edit</button>
-          <button type="button" id="my-pledge-delete" class="poster-btn poster-btn-danger">Delete</button>
-        </div>
-      </div>
-
-      <form id="pledge-form" class="poster-panel">
-        <div class="poster-field">
-          <label for="amount">Enter any amount (USD)</label>
-          <input type="number" id="amount" name="amount" min="1" max="10000" step="1" required />
-        </div>
-        <div class="poster-field">
-          <label for="name">Your name</label>
-          <input type="text" id="name" name="name" maxlength="50" required />
-        </div>
-        <div class="poster-field">
-          <label for="venmo">Venmo handle</label>
-          <input type="text" id="venmo" name="venmo" maxlength="50" placeholder="@yourhandle" required />
-          <p class="poster-muted">Only Mike sees this. He'll Venmo you after total contributions hit at least $500.</p>
-        </div>
-        <div class="poster-field checkbox">
-          <label>
-            <input type="checkbox" id="is_private" name="is_private" checked />
-            Keep my name private (show as "Anonymous" on the public list)
-          </label>
-        </div>
-        <button type="submit" class="poster-btn">Pledge</button>
-        <p id="pledge-status" class="poster-muted" aria-live="polite"></p>
-      </form>
-    </section>
-
-    <section>
-      <h2>Pledges</h2>
-      <div class="pledge-wrap">
-        <article class="pledge-card">
-          <table id="pledge-list" class="pledges">
-            <tbody>
-              <tr class="empty"><td colspan="2">Loading…</td></tr>
-            </tbody>
-          </table>
-        </article>
-      </div>
-    </section>
   </main>
-
-  <script>
-    type Milestone = { amount: number; label: string; desc: string };
-    type PublicPledge = { id: number; name: string | null; amount_cents: number; is_private: 0 | 1 };
-    type MyPledge = { id: number; name: string; amount_cents: number; venmo_handle: string; is_private: 0 | 1 };
-
-    const fmt = (cents: number) =>
-      `$${(cents / 100).toFixed(cents % 100 === 0 ? 0 : 2)}`;
-
-    const escapeHtml = (s: string) =>
-      s.replace(/[&<>"']/g, (c) =>
-        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]!),
-      );
-
-    const meterEl = document.getElementById('meter')!;
-    const milestones: Milestone[] = JSON.parse(meterEl.dataset.milestones!);
-    const goalCents = milestones[milestones.length - 1].amount * 100;
-    const headlineCents = milestones[1].amount * 100;
-
-    // Position markers on the bar
-    meterEl.querySelectorAll<HTMLElement>('.meter-marker').forEach((m) => {
-      const amt = Number(m.dataset.amount) * 100;
-      m.style.left = `${(amt / goalCents) * 100}%`;
-    });
-
-    async function loadPledges() {
-      const res = await fetch('/api/pledges');
-      if (!res.ok) return;
-      const { pledges, total_cents } = (await res.json()) as {
-        pledges: PublicPledge[];
-        total_cents: number;
-      };
-
-      const fill = meterEl.querySelector('.meter-fill') as HTMLElement;
-      const pct = Math.min(100, (total_cents / goalCents) * 100);
-      fill.style.width = pct + '%';
-
-      meterEl.querySelectorAll('.meter-marker').forEach((el) => {
-        const amt = Number((el as HTMLElement).dataset.amount) * 100;
-        el.classList.toggle('hit', total_cents >= amt);
-      });
-
-      const status = meterEl.querySelector('.meter-status')!;
-      if (total_cents >= goalCents) {
-        status.textContent = `${fmt(total_cents)} pledged — top shelf unlocked! 🎉`;
-      } else if (total_cents >= headlineCents) {
-        status.textContent = `${fmt(total_cents)} pledged — middle shelf locked in. ${fmt(goalCents - total_cents)} to top shelf.`;
-      } else {
-        status.textContent = `${fmt(total_cents)} pledged — ${fmt(headlineCents - total_cents)} to middle shelf.`;
-      }
-
-      const tbody = document.querySelector('#pledge-list tbody')!;
-      tbody.innerHTML = '';
-      if (pledges.length === 0) {
-        tbody.innerHTML = '<tr class="empty"><td colspan="2">No pledges yet — be the first!</td></tr>';
-      } else {
-        for (const p of pledges) {
-          const tr = document.createElement('tr');
-          const name = p.is_private ? 'Anonymous' : p.name ?? 'Anonymous';
-          tr.innerHTML = `<td class="pl-amt">${fmt(p.amount_cents)}</td><td class="pl-name">${escapeHtml(name)}</td>`;
-          tbody.appendChild(tr);
-        }
-      }
-    }
-
-    // Suggested donation quick-picks
-    document.querySelectorAll<HTMLButtonElement>('.donation').forEach((b) => {
-      b.addEventListener('click', () => {
-        (document.getElementById('amount') as HTMLInputElement).value = b.dataset.amount!;
-        document.getElementById('pledge-section')!.scrollIntoView({ behavior: 'smooth' });
-        (document.getElementById('name') as HTMLInputElement).focus();
-      });
-    });
-
-    // Form submit (create or edit)
-    const form = document.getElementById('pledge-form') as HTMLFormElement;
-    const status = document.getElementById('pledge-status')!;
-
-    form.addEventListener('submit', async (e) => {
-      e.preventDefault();
-      const submit = form.querySelector('button[type="submit"]') as HTMLButtonElement;
-      submit.disabled = true;
-      status.textContent = 'Submitting…';
-
-      try {
-        const fd = new FormData(form);
-
-        const body = {
-          name: String(fd.get('name')).trim(),
-          amount: Number(fd.get('amount')),
-          venmo_handle: String(fd.get('venmo')).trim(),
-          is_private: fd.get('is_private') === 'on',
-        };
-
-        const editing = form.dataset.editingId;
-        const url = editing ? `/api/pledges/${editing}` : '/api/pledges';
-        const method = editing ? 'PATCH' : 'POST';
-
-        const res = await fetch(url, {
-          method,
-          headers: { 'content-type': 'application/json' },
-          body: JSON.stringify(body),
-        });
-
-        if (res.ok) {
-          status.textContent = editing ? 'Pledge updated. Thanks!' : 'Thanks for pledging!';
-          form.reset();
-          delete form.dataset.editingId;
-          (document.getElementById('is_private') as HTMLInputElement).checked = true;
-          await Promise.all([loadPledges(), loadMyPledge()]);
-        } else {
-          const { error } = (await res
-            .json()
-            .catch(() => ({ error: 'Something went wrong' }))) as { error: string };
-          status.textContent = `Error: ${error}`;
-        }
-      } catch {
-        status.textContent = 'Error: Something went wrong. Please try again.';
-      } finally {
-        submit.disabled = false;
-      }
-    });
-
-    async function loadMyPledge() {
-      const banner = document.getElementById('my-pledge-banner')!;
-      const res = await fetch('/api/pledges/me');
-      if (!res.ok) {
-        banner.hidden = true;
-        return;
-      }
-      const p = (await res.json()) as MyPledge;
-      banner.hidden = false;
-      document.getElementById('my-pledge-amount')!.textContent = fmt(p.amount_cents);
-      document.getElementById('my-pledge-name')!.textContent =
-        p.is_private ? `${p.name} (private)` : p.name;
-
-      document.getElementById('my-pledge-edit')!.onclick = () => {
-        (document.getElementById('amount') as HTMLInputElement).value = String(p.amount_cents / 100);
-        (document.getElementById('name') as HTMLInputElement).value = p.name;
-        (document.getElementById('venmo') as HTMLInputElement).value = p.venmo_handle;
-        (document.getElementById('is_private') as HTMLInputElement).checked = p.is_private === 1;
-        form.dataset.editingId = String(p.id);
-        document.getElementById('pledge-section')!.scrollIntoView({ behavior: 'smooth' });
-      };
-
-      document.getElementById('my-pledge-delete')!.onclick = async () => {
-        if (!confirm('Delete your pledge?')) return;
-        const r = await fetch(`/api/pledges/${p.id}`, { method: 'DELETE' });
-        if (r.ok) {
-          banner.hidden = true;
-          form.reset();
-          delete form.dataset.editingId;
-          (document.getElementById('is_private') as HTMLInputElement).checked = true;
-          status.textContent = 'Pledge deleted.';
-          await loadPledges();
-        }
-      };
-    }
-
-    loadPledges();
-    loadMyPledge();
-  </script>
 
   <style>
     /* ─── Poster island (#44) ────────────────────────────────────────────────
        This event poster is a self-contained style island. Its bespoke palette and
-       every bespoke element (buttons, panels, inputs, fields, muted text) are defined
-       LOCALLY here and scoped to this page by Astro — a change to a global primitive
-       can't reach in, and nothing here reaches out. The only things it shares with the
-       rest of the site are the shell (nav/header/footer, outside this <main>) and the
-       max content width (.container). Plain body copy *respects* the shell-retint
+       every bespoke element (buttons, panels, muted text) are defined LOCALLY here
+       and scoped to this page by Astro — a change to a global primitive can't reach
+       in, and nothing here reaches out. The only things it shares with the rest of
+       the site are the shell (nav/header/footer, outside this <main>) and the max
+       content width (.container). Plain body copy *respects* the shell-retint
        tokens (--text/--font-body) the same way it respects max-width; bespoke fonts
        (Bungee Shade / Yellowtail / Limelight) are the sanctioned event-body exception. */
+
+    /* — the poster's font set. Body text is Inter, inherited from the shell's
+         --font-body; --poster-font-name is the same face as the site's display
+         font (both already loaded by the shell on every page). — */
+    .event-poster {
+      --poster-font-hero: "Bungee Shade", Georgia, serif;
+      --poster-font-script: "Yellowtail", Georgia, cursive, serif;
+      --poster-font-menu: "Limelight", Georgia, serif;
+      --poster-font-name: "Bricolage Grotesque", system-ui, sans-serif;
+    }
 
     /* — local palette: literals this poster owns, independent of the shell — */
     .event-poster {
       text-align: center;
-      --poster-sand: #fff8eb;
-      --poster-sand-dark: #f0d9a8;
       --poster-paper: #fffcf3;
       --poster-line: #e8cea0;
       --poster-ocean: #00b4cc;
       --poster-ocean-dark: #006d7a;
       --poster-sun: #ffa726;
       --poster-sunset: #ff5252;
-      --poster-ink: #26201a;
-      --poster-ink-soft: #6a584a;
-      --poster-input-bg: #ffffff;
+      --poster-ink: #43372d;
+      --poster-ink-soft: #877161;
       --poster-action-ink: #ffffff; /* text on a filled button */
-      --poster-focus-rgb: 0, 180, 204; /* ocean focus ring */
-      --poster-field-border: color-mix(in srgb, var(--poster-ink) 38%, transparent);
-    }
-    @media (prefers-contrast: more) {
-      .event-poster {
-        --poster-field-border: color-mix(in srgb, var(--poster-ink) 70%, transparent);
-      }
-    }
-
-    /* — sever the borrowed bare elements: reset, then rebuild locally below. This
-         reset is qualified so it beats the global bare button/input/label rules; every
-         rebuild carries .event-poster + its class/type so it beats this reset under
-         either Astro scoping strategy. — */
-    .event-poster button,
-    .event-poster input,
-    .event-poster label {
-      all: revert;
-      box-sizing: border-box;
     }
 
     /* — bespoke headings + links — */
     h1 {
-      font-family: "Bungee Shade", Georgia, serif;
+      font-family: var(--poster-font-hero);
       font-weight: 400;
       font-size: 2.75rem;
       line-height: 1.2;
       color: var(--poster-sunset);
-      margin: 0 0 0.5em;
+      margin: 0 0 0.15em;
     }
     h2 {
-      font-family: "Yellowtail", Georgia, cursive, serif;
+      font-family: var(--poster-font-script);
       font-weight: 400;
       font-size: 2.25rem;
       line-height: 1.3;
       margin: 2.5rem 0 0.5rem;
-      color: var(--poster-ocean-dark);
-    }
-    h3 {
-      font-size: 1.15rem;
+      color: var(--poster-ocean);
     }
     .event-poster a {
       color: var(--poster-ocean);
@@ -434,8 +178,13 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
     .event-poster a:hover {
       text-decoration: underline;
     }
+    .tagline {
+      margin: 0;
+      font-size: 1.05rem;
+      color: var(--poster-ink-soft);
+    }
 
-    /* — local buttons (frozen from main's beach look; no .radiate on main) — */
+    /* — local button (frozen from main's beach look; no .radiate on main) — */
     .event-poster .poster-btn {
       font: inherit;
       font-size: 0.95rem;
@@ -454,224 +203,69 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       color: var(--poster-action-ink);
       transition: background 140ms ease;
     }
-    .event-poster .poster-btn:hover { background: var(--poster-sun); }
-    .event-poster .poster-btn-danger {
-      background: transparent;
-      color: var(--poster-sunset);
-      border: 1px solid var(--poster-sunset);
-    }
-    .event-poster .poster-btn-danger:hover {
-      background: var(--poster-sunset);
-      color: var(--poster-action-ink);
-    }
-    .event-poster button:disabled {
-      opacity: 0.6;
-      cursor: not-allowed;
+    .event-poster .poster-btn:hover {
+      background: var(--poster-sun);
+      text-decoration: none;
     }
 
-    /* — local inputs / fields / labels (frozen from main's beach look) — */
-    .event-poster input[type="text"],
-    .event-poster input[type="number"] {
-      font: inherit;
-      width: 100%;
-      padding: 0.6rem 0.8rem;
-      color: var(--poster-ink);
-      background: var(--poster-input-bg);
-      border: 1px solid var(--poster-field-border);
-      border-radius: 12px;
-      transition: border-color 120ms ease, box-shadow 120ms ease;
-    }
-    .event-poster ::placeholder {
-      color: var(--poster-ink-soft);
-    }
-    .event-poster input:focus {
-      outline: none;
-      border-color: rgba(var(--poster-focus-rgb), 0.55);
-      box-shadow: 0 0 0 3px rgba(var(--poster-focus-rgb), 0.15), 0 0 14px rgba(var(--poster-focus-rgb), 0.16);
-    }
-    .event-poster input:disabled {
-      opacity: 0.5;
-      cursor: not-allowed;
-    }
-    .event-poster label {
-      display: block;
-      font-weight: 600;
-      font-size: 0.9rem;
-      margin-bottom: 0.35rem;
-      color: var(--poster-ink);
-    }
-    .poster-field { margin-bottom: 1.1rem; }
-
-    .menu-cards {
-      display: grid;
-      grid-template-columns: 1fr 1.5fr 1fr;
-      gap: 0.75rem;
-      margin: 1rem 0 0.5rem;
-    }
     .menu-card {
+      max-width: 36rem;
+      margin: 1rem auto 0.5rem;
       background: var(--poster-paper);
       border: 1px solid var(--poster-line);
       border-radius: 12px;
-      padding: 1rem 0.75rem;
+      padding: 1.5rem 1rem;
     }
     .menu-card h3 {
-      margin: 0 0 0.75rem;
+      margin: 1.75rem 0 0.85rem;
       letter-spacing: 0.05em;
       font-size: 1.4rem;
       line-height: 1.15;
-      color: var(--poster-ink-soft);
-      font-family: "Limelight", Georgia, serif;
+      color: var(--poster-ocean-dark);
+      font-family: var(--poster-font-menu);
       font-weight: 400;
     }
+    .menu-card h3:first-child { margin-top: 0; }
     .menu-card ul {
       list-style: none;
       padding: 0;
       margin: 0;
-      font-size: 1rem;
-      line-height: 1.6;
-      color: var(--poster-ink);
+      text-align: left;
+    }
+    .menu-card li {
+      margin-bottom: 0.85rem;
       overflow-wrap: anywhere;
     }
-    @media (max-width: 600px) {
-      .menu-cards { grid-template-columns: 1fr; }
-    }
-
-    .meter { margin: 1rem 0 2.5rem; }
-    .meter-bar {
-      position: relative;
-      height: 18px;
-      background: var(--poster-sand-dark);
-      border-radius: 9px;
-    }
-    .meter-fill {
-      height: 100%;
-      background: linear-gradient(90deg, var(--poster-sun), var(--poster-sunset));
-      border-radius: 9px;
-      transition: width 0.6s ease;
-    }
-    .meter-marker {
-      position: absolute;
-      top: -4px;
-      transform: translateX(-50%);
-      pointer-events: none;
-    }
-    .meter-marker::before {
-      content: '';
+    .menu-card li:last-child { margin-bottom: 0; }
+    .menu-card li strong {
       display: block;
-      width: 2px;
-      height: 26px;
-      background: var(--poster-ocean-dark);
-      margin: 0 auto;
-    }
-    .meter-marker span {
-      position: absolute;
-      top: 28px;
-      left: 50%;
-      transform: translateX(-50%);
-      font-size: 0.75rem;
-      color: var(--poster-ink-soft);
-      white-space: nowrap;
-    }
-    .meter-marker.hit::before { background: var(--poster-sunset); }
-    .meter-status { margin: 2.5rem 0 0; }
-
-    .milestones { list-style: none; padding: 0; }
-    .milestones li {
-      padding: 0.6rem 0;
-      border-bottom: 1px dashed var(--poster-line);
-    }
-    .milestones li:last-child { border-bottom: none; }
-
-    .donations {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 0.75rem;
-    }
-    .event-poster .donation {
-      /* stacks amount/description (overrides the inline-flex button base) */
-      font: inherit;
-      display: block;
-      text-align: center;
-      background: var(--poster-paper);
-      border: 1px solid var(--poster-line);
+      font-family: var(--poster-font-name);
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.4;
       color: var(--poster-ink);
-      padding: 1rem;
-      border-radius: 10px;
-      cursor: pointer;
-      transition: transform 0.1s, background 0.1s;
-      font-weight: normal;
     }
-    .event-poster .donation:hover {
-      background: var(--poster-sand);
-      transform: translateY(-1px);
-    }
-    .donation-amount {
-      font-size: 1.4rem;
-      font-weight: 400;
-      color: var(--poster-ink-soft);
-      font-family: "Limelight", Georgia, serif;
-    }
-    .donation-desc {
+    .menu-ingredients {
+      display: block;
       font-size: 0.85rem;
+      line-height: 1.4;
       color: var(--poster-ink-soft);
-      margin-top: 0.25rem;
     }
-    .event-poster .donation.featured {
-      border-color: var(--poster-sun);
-      border-width: 2px;
-    }
+    .menu-ingredients .ing { white-space: nowrap; }
 
-    .event-poster .poster-field.checkbox label {
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      gap: 0.5rem;
-      font-weight: 400;
-    }
-    .event-poster .poster-field.checkbox input { width: auto; }
-
-    .pledge-wrap {
+    .venmo {
+      max-width: 20rem;
+      margin: 1.25rem auto 0;
       display: grid;
-      grid-template-columns: 1fr 1.5fr 1fr;
-      gap: 0.75rem;
+      justify-items: center;
+      gap: 1rem;
     }
-    .pledge-card {
-      grid-column: 2;
-      background: var(--poster-paper);
+    .venmo-qr {
+      display: block;
+      width: 176px;
+      height: 176px;
       border: 1px solid var(--poster-line);
-      border-radius: 12px;
-      padding: 1rem 0.75rem;
-    }
-    @media (max-width: 600px) {
-      .pledge-wrap { grid-template-columns: 1fr; }
-      .pledge-card { grid-column: 1; }
-    }
-    .pledges {
-      width: 100%;
-      border-collapse: collapse;
-      table-layout: fixed;
-      margin: 0;
-    }
-    .pledges :global(td) {
-      padding: 0.25rem 0;
-      border: none;
-      width: 50%;
-    }
-    .pledges :global(td.pl-amt) {
-      text-align: right;
-      padding-right: 0.6rem;
-      font-weight: 700;
-      color: var(--poster-ocean-dark);
-    }
-    .pledges :global(td.pl-name) {
-      text-align: left;
-      padding-left: 0.6rem;
-    }
-    .pledges :global(tr.empty td) {
-      text-align: center;
-      padding: 0.5rem 0;
-      width: auto;
-      color: var(--poster-ink-soft);
+      border-radius: 8px;
     }
 
     .poster-panel {
@@ -681,18 +275,6 @@ const classics = ['Paloma', 'Ranch Water', 'Tom Collins', 'Old Fashioned', 'Mart
       padding: 24px;
     }
     .poster-panel > :last-child { margin-bottom: 0; }
-    .banner {
-      /* soft sun-tinted highlight, derived from the local poster tokens */
-      background: color-mix(in srgb, var(--poster-sun) 15%, var(--poster-paper));
-      border-color: var(--poster-sun);
-      margin-bottom: 1rem;
-    }
-    .banner p { margin: 0 0 0.5rem; }
-    .banner-actions {
-      display: flex;
-      justify-content: center;
-      gap: 0.5rem;
-    }
     .poster-muted { color: var(--poster-ink-soft); }
   </style>
 </Layout>

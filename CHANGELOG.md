@@ -13,6 +13,13 @@ are intentionally left out to keep this readable.
   values) and a curated preferred-bottles table mapping generic recipe ingredients to
   the actual bottles to buy. Read-only content, no schema change. (#69)
 
+### Changed
+- **Beach bar poster rework.** `/events/framily-beach-bar-2026` drops the pledge
+  meter, form, and list in favor of a Donate section — Venmo link + QR code,
+  suggested $3 per drink. The menu is now a single card (Favorites / Tiki /
+  Classics / Mocktails) with per-drink ingredient lines mirroring the recipe DB.
+  The now-unused `/api/pledges` endpoints remain; removal is a follow-up.
+
 ## 2026-06-11
 
 ### Added
