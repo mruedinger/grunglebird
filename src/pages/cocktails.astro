@@ -109,6 +109,33 @@ const recipeJson = JSON.stringify(recipeData).replace(/</g, "\\u003c");
 
 const recipesEmptyText = isAdmin ? "no recipes yet — write down the first one." : "the book's blank.";
 const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "the shelf's bare.";
+
+// Cheat-sheet content, curated in issue #69. The conversions are deliberately
+// imprecise head-math values — don't correct them.
+const CONVERSIONS = [
+  ["1 barspoon", "1/8 oz"],
+  ["5 dashes", "1/8 oz"],
+  ["30 ml", "1 oz"],
+  ["750 ml", "25 oz"],
+  ["1 gal", "128 oz"],
+];
+
+const BOTTLES = [
+  ["bourbon", "Old Grand Dad Bonded, Old Forester 100"],
+  ["rye", "Old Forester Rye"],
+  ["Irish whiskey", "Powers Gold Label"],
+  ["Irish cream", "Saint Brendan's"],
+  ["gin", "Ford's, Beefeater, Gordon's"],
+  ["light rum", "Don Q, Planteray 3 Stars"],
+  ["aged Spanish rum", "Flor de Caña 7"],
+  ["aged Jamaican rum", "Appleton 12 Year, Denizen Merchant's Reserve, Planteray Xaymaca"],
+  ["dark rum", "Coruba Dark, Planteray Original Dark"],
+  ["demerara rum", "Pusser's, El Dorado 5 Year"],
+  ["tequila (blanco / reposado)", "Olmeca Altos"],
+  ["vermouth", "Dolin"],
+  ["coffee liqueur", "Mr Black"],
+  ["dry curaçao", "Pierre Ferrand"],
+];
 ---
 
 <Layout title="Cocktails — grunglebird" active="cocktails">
@@ -162,6 +189,46 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
             </tr>
           </tbody>
         </table>
+      </div>
+    </section>
+
+    <section class="catalog">
+      <p class="eyebrow">Cheat Sheets</p>
+      <div class="cheat-grid">
+        <div class="card">
+          <h3>Conversions</h3>
+          <p class="muted">close enough.</p>
+          <dl class="conv">
+            {CONVERSIONS.map(([from, to]) => (
+              <Fragment>
+                <dt>{from}</dt>
+                <dd>{to}</dd>
+              </Fragment>
+            ))}
+          </dl>
+        </div>
+        <div class="card">
+          <h3>Preferred bottles</h3>
+          <p class="muted">when the recipe won't name names.</p>
+          <div class="table-frame catalog-scroll">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th scope="col">Calls for</th>
+                  <th scope="col">Buy</th>
+                </tr>
+              </thead>
+              <tbody>
+                {BOTTLES.map(([generic, bottles]) => (
+                  <tr>
+                    <td>{generic}</td>
+                    <td>{bottles}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -1078,6 +1145,31 @@ const invEmptyText = isAdmin ? "nothing here yet — add the first bottle." : "t
     /* opt-in cap on the shared .table-frame: a few rows, then sticky header + body scroll */
     .catalog-scroll {
       --table-max-block: 16rem;
+    }
+    /* cheat-sheet cards: side by side, stacking to one column when they can't both fit */
+    .cheat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+      gap: var(--space-lg);
+    }
+    /* conversion pairs: two aligned columns, lookup key in accent (echoes the recipe
+       card's amount column) */
+    .conv {
+      margin: var(--space-md) 0 0;
+      display: grid;
+      grid-template-columns: max-content max-content;
+      justify-content: start;
+      column-gap: var(--space-md);
+      row-gap: var(--space-2xs);
+    }
+    .conv dt {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .conv dd {
+      margin: 0;
+      font-variant-numeric: tabular-nums;
     }
     /* sortable header: a plain text button (not the .button primitive) inside the th */
     .th-sort {
