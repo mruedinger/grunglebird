@@ -8,9 +8,9 @@ are intentionally left out to keep this readable.
 ## 2026-06-12
 
 ### Added
-- **Cheat-sheet cards.** `/cocktails` gains a "Cheat Sheets" section between recipes
-  and inventory: a static quick-conversion chart (deliberately imprecise head-math
-  values) and a curated preferred-bottles list mapping generic recipe ingredients to
+- **Cheat sheets.** `/cocktails` gains a "Cheat Sheets" section between recipes
+  and inventory: a static quick-conversion table (deliberately imprecise head-math
+  values) and a curated preferred-bottles table mapping generic recipe ingredients to
   the actual bottles to buy. Read-only content, no schema change. (#69)
 
 ## 2026-06-11

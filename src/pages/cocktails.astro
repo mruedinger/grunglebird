@@ -120,21 +120,22 @@ const CONVERSIONS = [
   ["1 gal", "128 oz"],
 ];
 
+// Sorted alphabetically by spirit.
 const BOTTLES = [
-  ["bourbon", "Old Grand Dad Bonded, Old Forester 100"],
-  ["rye", "Old Forester Rye"],
-  ["Irish whiskey", "Powers Gold Label"],
-  ["Irish cream", "Saint Brendan's"],
-  ["gin", "Ford's, Beefeater, Gordon's"],
-  ["light rum", "Don Q, Planteray 3 Stars"],
-  ["aged Spanish rum", "Flor de Caña 7"],
   ["aged Jamaican rum", "Appleton 12 Year, Denizen Merchant's Reserve, Planteray Xaymaca"],
+  ["aged Spanish rum", "Flor de Caña 7"],
+  ["bourbon", "Old Grand Dad Bonded, Old Forester 100"],
+  ["coffee liqueur", "Mr Black"],
   ["dark rum", "Coruba Dark, Planteray Original Dark"],
   ["demerara rum", "Pusser's, El Dorado 5 Year"],
-  ["tequila (blanco / reposado)", "Olmeca Altos"],
-  ["vermouth", "Dolin"],
-  ["coffee liqueur", "Mr Black"],
   ["dry curaçao", "Pierre Ferrand"],
+  ["gin", "Ford's, Beefeater, Gordon's"],
+  ["Irish cream", "Saint Brendan's"],
+  ["Irish whiskey", "Powers Gold Label"],
+  ["light rum", "Don Q, Planteray 3 Stars"],
+  ["rye", "Old Forester Rye"],
+  ["tequila", "Olmeca Altos"],
+  ["vermouth", "Dolin"],
 ];
 ---
 
@@ -195,39 +196,41 @@ const BOTTLES = [
     <section class="catalog">
       <p class="eyebrow">Cheat Sheets</p>
       <div class="cheat-grid">
-        <div class="card">
-          <h3>Conversions</h3>
-          <p class="muted">close enough.</p>
-          <dl class="conv">
-            {CONVERSIONS.map(([from, to]) => (
-              <Fragment>
-                <dt>{from}</dt>
-                <dd>{to}</dd>
-              </Fragment>
-            ))}
-          </dl>
-        </div>
-        <div class="card">
-          <h3>Preferred bottles</h3>
-          <p class="muted">when the recipe won't name names.</p>
-          <div class="table-frame catalog-scroll">
-            <table class="table">
-              <thead>
+        <div class="table-frame">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">not oz</th>
+                <th scope="col">oz</th>
+              </tr>
+            </thead>
+            <tbody>
+              {CONVERSIONS.map(([from, to]) => (
                 <tr>
-                  <th scope="col">Calls for</th>
-                  <th scope="col">Buy</th>
+                  <td>{from}</td>
+                  <td>{to}</td>
                 </tr>
-              </thead>
-              <tbody>
-                {BOTTLES.map(([generic, bottles]) => (
-                  <tr>
-                    <td>{generic}</td>
-                    <td>{bottles}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <div class="table-frame catalog-scroll">
+          <table class="table">
+            <thead>
+              <tr>
+                <th scope="col">Spirit</th>
+                <th scope="col">Mike likes</th>
+              </tr>
+            </thead>
+            <tbody>
+              {BOTTLES.map(([generic, bottles]) => (
+                <tr>
+                  <td>{generic}</td>
+                  <td>{bottles}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
         </div>
       </div>
     </section>
@@ -1146,30 +1149,13 @@ const BOTTLES = [
     .catalog-scroll {
       --table-max-block: 16rem;
     }
-    /* cheat-sheet cards: side by side, stacking to one column when they can't both fit */
+    /* cheat-sheet tables: side by side, stacking to one column when they can't both fit;
+       start-aligned so the short conversions frame doesn't stretch to its neighbor */
     .cheat-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
       gap: var(--space-lg);
-    }
-    /* conversion pairs: two aligned columns, lookup key in accent (echoes the recipe
-       card's amount column) */
-    .conv {
-      margin: var(--space-md) 0 0;
-      display: grid;
-      grid-template-columns: max-content max-content;
-      justify-content: start;
-      column-gap: var(--space-md);
-      row-gap: var(--space-2xs);
-    }
-    .conv dt {
-      color: var(--accent);
-      font-variant-numeric: tabular-nums;
-      text-align: right;
-    }
-    .conv dd {
-      margin: 0;
-      font-variant-numeric: tabular-nums;
+      align-items: start;
     }
     /* sortable header: a plain text button (not the .button primitive) inside the th */
     .th-sort {
