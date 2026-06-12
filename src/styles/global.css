@@ -383,6 +383,8 @@ code {
 input[type="text"],
 input[type="number"],
 input[type="search"],
+input[type="date"],
+input[type="time"],
 textarea,
 select {
   font: inherit;
