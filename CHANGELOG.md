@@ -5,6 +5,14 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-12
+
+### Added
+- **Cheat sheets.** `/cocktails` gains a "Cheat Sheets" section between recipes
+  and inventory: a static quick-conversion table (deliberately imprecise head-math
+  values) and a curated preferred-bottles table mapping generic recipe ingredients to
+  the actual bottles to buy. Read-only content, no schema change. (#69)
+
 ## 2026-06-11
 
 ### Added
