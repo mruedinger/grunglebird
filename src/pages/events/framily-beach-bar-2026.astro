@@ -1,5 +1,8 @@
 ---
 import Layout from "../../layouts/Layout.astro";
+import { env } from "cloudflare:workers";
+import { type AuthEnv, getSession } from "../../lib/auth";
+import { nameKey } from "../../lib/service-log";
 
 // Drink names mirror the recipe DB; ingredient lists mirror it too (garnishes
 // omitted) but are shortened for display: "juice"/"syrup"/"bitters" dropped,
@@ -48,6 +51,105 @@ const menu = [
 ];
 
 const venmoUrl = 'https://venmo.com/u/mruedinger';
+
+// ─── Service log (#72): admin-only, SSR-gated. Signed-out visitors get the
+// poster exactly as before — none of this data or markup leaves the server. ───
+const isAdmin = await getSession(Astro.request, env as AuthEnv);
+const EVENT_SLUG = 'framily-beach-bar-2026';
+
+type ServiceNightVM = {
+  id: number;
+  service_date: string;
+  opened_at: string | null;
+  closed_at: string | null;
+  notes: string | null;
+  guests: string[];
+  drinks: { name: string; count: number }[];
+  attributions: { guest: string; drink: string }[];
+};
+
+const menuDrinkNames = menu.flatMap((g) => g.drinks.map((d) => d.name));
+
+let nights: ServiceNightVM[] = [];
+let knownGuests: string[] = [];
+let offMenuDrinks: string[] = [];
+
+if (isAdmin) {
+  type NightRow = {
+    id: number;
+    service_date: string;
+    opened_at: string | null;
+    closed_at: string | null;
+    notes: string | null;
+  };
+  const [nightRows, guestRows, drinkRows, attrRows, allGuests, allDrinks] = await Promise.all([
+    env.DB.prepare(
+      `SELECT id, service_date, opened_at, closed_at, notes
+       FROM service_nights WHERE event_slug = ?
+       ORDER BY service_date DESC, id DESC`,
+    ).bind(EVENT_SLUG).all<NightRow>(),
+    env.DB.prepare(
+      `SELECT ng.night_id, g.name
+       FROM service_night_guests ng
+       JOIN service_guests g ON g.id = ng.guest_id
+       JOIN service_nights n ON n.id = ng.night_id
+       WHERE n.event_slug = ?
+       ORDER BY g.name COLLATE NOCASE`,
+    ).bind(EVENT_SLUG).all<{ night_id: number; name: string }>(),
+    env.DB.prepare(
+      `SELECT nd.night_id, d.name, nd.count
+       FROM service_night_drinks nd
+       JOIN service_drinks d ON d.id = nd.drink_id
+       JOIN service_nights n ON n.id = nd.night_id
+       WHERE n.event_slug = ?
+       ORDER BY nd.count DESC, d.name COLLATE NOCASE`,
+    ).bind(EVENT_SLUG).all<{ night_id: number; name: string; count: number }>(),
+    env.DB.prepare(
+      `SELECT ngd.night_id, g.name AS guest, d.name AS drink
+       FROM service_night_guest_drinks ngd
+       JOIN service_guests g ON g.id = ngd.guest_id
+       JOIN service_drinks d ON d.id = ngd.drink_id
+       JOIN service_nights n ON n.id = ngd.night_id
+       WHERE n.event_slug = ?
+       ORDER BY g.name COLLATE NOCASE`,
+    ).bind(EVENT_SLUG).all<{ night_id: number; guest: string; drink: string }>(),
+    env.DB.prepare(`SELECT name FROM service_guests ORDER BY name COLLATE NOCASE`)
+      .all<{ name: string }>(),
+    env.DB.prepare(`SELECT name FROM service_drinks ORDER BY name COLLATE NOCASE`)
+      .all<{ name: string }>(),
+  ]);
+
+  nights = nightRows.results.map((r) => ({
+    ...r,
+    guests: guestRows.results.filter((x) => x.night_id === r.id).map((x) => x.name),
+    drinks: drinkRows.results
+      .filter((x) => x.night_id === r.id)
+      .map((x) => ({ name: x.name, count: x.count })),
+    attributions: attrRows.results
+      .filter((x) => x.night_id === r.id)
+      .map((x) => ({ guest: x.guest, drink: x.drink })),
+  }));
+  knownGuests = allGuests.results.map((g) => g.name);
+  const menuKeys = new Set(menuDrinkNames.map(nameKey));
+  offMenuDrinks = allDrinks.results.map((d) => d.name).filter((n) => !menuKeys.has(nameKey(n)));
+}
+
+// Parts-built local date — new Date("YYYY-MM-DD") parses as UTC and can shift a day.
+function dateLabel(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', {
+    weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+  });
+}
+
+// Guard the inline JSON island against a literal "</script>" in night text.
+const logJson = JSON.stringify({
+  slug: EVENT_SLUG,
+  nights,
+  knownGuests,
+  offMenuDrinks,
+  menu: menuDrinkNames,
+}).replace(/</g, '\\u003c');
 ---
 
 <Layout
@@ -110,6 +212,157 @@ const venmoUrl = 'https://venmo.com/u/mruedinger';
     </section>
   </main>
 
+  {isAdmin && (
+    <section class="container service-log" id="service-log">
+      <p class="eyebrow">After hours</p>
+      <h2>Service log</h2>
+      <p class="muted">What the legal pad saw.</p>
+
+      <button type="button" class="button" id="log-open">Log a night</button>
+
+      <form id="log-form" class="card is-hidden">
+        <h3 id="lf-title">New night</h3>
+
+        <div class="alert alert-danger is-hidden" id="lf-error" role="alert">
+          <span class="alert-icon">!</span>
+          <div><p class="alert-body" id="lf-error-msg"></p></div>
+        </div>
+
+        <div class="lf-when">
+          <div class="field lf-date-field">
+            <label for="lf-date">Date</label>
+            <input type="date" id="lf-date" required />
+          </div>
+          <div class="field">
+            <label for="lf-open">Opened</label>
+            <input type="time" id="lf-open" />
+          </div>
+          <div class="field">
+            <label for="lf-close">Closed</label>
+            <input type="time" id="lf-close" />
+          </div>
+        </div>
+
+        <p class="label">Guests</p>
+        <div class="lf-chips" id="lf-guest-chips"></div>
+        <div class="lf-addrow">
+          <input
+            type="text"
+            id="lf-guest-in"
+            list="lf-guest-list"
+            placeholder="who showed up"
+            maxlength="60"
+            autocomplete="off"
+          />
+          <datalist id="lf-guest-list">
+            {knownGuests.map((g) => <option value={g}></option>)}
+          </datalist>
+          <button type="button" class="button ghost sm" id="lf-guest-add">+ add</button>
+        </div>
+
+        <p class="label">Drinks</p>
+        <div class="lf-tally" id="lf-tally"></div>
+        <div class="lf-addrow">
+          <input
+            type="text"
+            id="lf-drink-in"
+            list="lf-drink-list"
+            placeholder="off-menu drink"
+            maxlength="80"
+            autocomplete="off"
+          />
+          <datalist id="lf-drink-list">
+            {offMenuDrinks.map((d) => <option value={d}></option>)}
+          </datalist>
+          <button type="button" class="button ghost sm" id="lf-drink-add">+ add</button>
+        </div>
+
+        <details class="lf-attr" id="lf-attr">
+          <summary>Favorites <span class="muted">(optional)</span></summary>
+          <p class="help">What each guest favored — not a record of everything they drank.</p>
+          <div class="lf-attr-body" id="lf-attr-body"></div>
+        </details>
+
+        <div class="field">
+          <label for="lf-notes">Notes</label>
+          <textarea id="lf-notes" rows="3" maxlength="2000" placeholder="anything memorable"></textarea>
+        </div>
+
+        <div class="lf-actions">
+          <button type="button" class="button danger is-hidden" id="lf-delete">Delete</button>
+          <button type="button" class="button ghost" id="lf-cancel">Cancel</button>
+          <button type="submit" class="button" id="lf-save">Save</button>
+        </div>
+      </form>
+
+      <template id="lf-row-tpl">
+        <div class="lf-row">
+          <span class="lf-row-name"></span>
+          <input type="number" min="0" max="999" step="1" inputmode="numeric" placeholder="0" />
+        </div>
+      </template>
+
+      <div class="log-nights" id="log-nights">
+        {nights.map((n) => {
+          const total = n.drinks.reduce((s, d) => s + d.count, 0);
+          // Favorites read per guest ("Sara: Daiquiri"), not per drink.
+          const favs = n.guests
+            .map((g) => ({
+              guest: g,
+              drinks: n.attributions.filter((a) => a.guest === g).map((a) => a.drink),
+            }))
+            .filter((x) => x.drinks.length > 0);
+          return (
+            <details class="card log-night">
+              <summary>
+                <span class="ln-date">{dateLabel(n.service_date)}</span>
+                <span class="muted ln-meta">
+                  {[
+                    n.guests.length > 0 &&
+                      `${n.guests.length} ${n.guests.length === 1 ? 'guest' : 'guests'}`,
+                    total > 0 && `${total} ${total === 1 ? 'drink' : 'drinks'}`,
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </span>
+              </summary>
+              <div class="ln-body">
+                {(n.opened_at || n.closed_at) && (
+                  <p class="muted ln-times">{n.opened_at ?? '?'} – {n.closed_at ?? '?'}</p>
+                )}
+                {n.guests.length > 0 && <p class="ln-guests">{n.guests.join(', ')}</p>}
+                {n.drinks.length > 0 && (
+                  <ul class="ln-tally">
+                    {n.drinks.map((d) => (
+                      <li>
+                        <span class="ln-count">{d.count}</span> {d.name}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {favs.length > 0 && (
+                  <p class="ln-favs">
+                    <span class="muted">favorites — </span>
+                    {favs.map((x, i) => (
+                      <Fragment>{i > 0 && '; '}{x.guest}: {x.drinks.join(', ')}</Fragment>
+                    ))}
+                  </p>
+                )}
+                {n.notes && <p class="ln-notes">{n.notes}</p>}
+                <div class="ln-actions">
+                  <button type="button" class="button ghost sm ln-edit" data-id={n.id}>Edit</button>
+                </div>
+              </div>
+            </details>
+          );
+        })}
+        {nights.length === 0 && <p class="muted">Nothing on the books yet.</p>}
+      </div>
+
+      <script type="application/json" id="log-data" set:html={logJson} />
+    </section>
+  )}
+
   <style>
     /* ─── Poster island (#44) ────────────────────────────────────────────────
        This event poster is a self-contained style island. Its bespoke palette and
@@ -145,8 +398,9 @@ const venmoUrl = 'https://venmo.com/u/mruedinger';
       --poster-action-ink: #ffffff; /* text on a filled button */
     }
 
-    /* — bespoke headings + links — */
-    h1 {
+    /* — bespoke headings + links — scoped under .event-poster so they can't
+         bleed into the admin service-log section below the island */
+    .event-poster h1 {
       font-family: var(--poster-font-hero);
       font-weight: 400;
       font-size: 2.75rem;
@@ -154,7 +408,7 @@ const venmoUrl = 'https://venmo.com/u/mruedinger';
       color: var(--poster-sunset);
       margin: 0 0 0.15em;
     }
-    h2 {
+    .event-poster h2 {
       font-family: var(--poster-font-script);
       font-weight: 400;
       font-size: 2.25rem;
@@ -248,5 +502,421 @@ const venmoUrl = 'https://venmo.com/u/mruedinger';
     .heart { color: var(--poster-sunset); }
 
     .poster-muted { color: var(--poster-ink-soft); }
+
+    /* ─── Service log (#72) — admin-only, OUTSIDE the poster island. Shared-system
+       UI: every primitive comes from global.css (retinted by the beach theme);
+       only page layout lives here, built from the shared tokens. :global() marks
+       the bits the client script builds at runtime — Astro's scoped attribute
+       never lands on those. ─── */
+    .service-log {
+      padding-top: 0;
+      border-top: 1px solid var(--hair);
+      margin-top: var(--space-lg);
+    }
+    .service-log > .eyebrow {
+      margin: var(--space-xl) 0 var(--space-2xs);
+    }
+    .is-hidden {
+      display: none !important;
+    }
+
+    #log-form {
+      margin-top: var(--space-lg);
+    }
+    .lf-when {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 0 var(--space-md);
+    }
+    @media (max-width: 600px) {
+      .lf-when {
+        grid-template-columns: 1fr 1fr;
+      }
+      .lf-when .lf-date-field {
+        grid-column: 1 / -1;
+      }
+    }
+    .lf-chips {
+      display: flex;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+    }
+    .lf-chips:empty {
+      display: none;
+    }
+    .lf-addrow {
+      display: flex;
+      gap: var(--space-xs);
+      margin: var(--space-xs) 0 var(--space-md);
+    }
+    .lf-addrow input {
+      flex: 1;
+    }
+    .lf-tally {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+      gap: var(--space-xs) var(--space-lg);
+      margin-top: var(--space-xs);
+    }
+    .lf-row {
+      display: grid;
+      grid-template-columns: 1fr 5rem;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .lf-row-name {
+      font-size: var(--text-sm);
+    }
+    .lf-attr {
+      margin: var(--space-md) 0;
+    }
+    .lf-attr summary {
+      cursor: pointer;
+      font-weight: 600;
+      font-size: var(--text-sm);
+    }
+    .lf-attr-body {
+      display: grid;
+      gap: var(--space-xs);
+      margin-top: var(--space-xs);
+    }
+    .service-log :global(.lf-attr-row) {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .service-log :global(.lf-attr-name) {
+      font-size: var(--text-sm);
+      font-weight: 600;
+      min-width: 6rem;
+    }
+    .lf-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: var(--space-xs);
+      margin-top: var(--space-md);
+    }
+    #lf-delete {
+      margin-right: auto;
+    }
+
+    .log-nights {
+      display: grid;
+      gap: var(--space-sm);
+      margin-top: var(--space-lg);
+    }
+    .log-night summary {
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+      gap: var(--space-sm);
+      cursor: pointer;
+    }
+    .ln-date {
+      font-weight: 600;
+    }
+    .ln-meta {
+      font-size: var(--text-sm);
+    }
+    .ln-body {
+      margin-top: var(--space-sm);
+    }
+    .ln-times,
+    .ln-guests {
+      margin-bottom: var(--space-xs);
+    }
+    .ln-tally {
+      list-style: none;
+      padding: 0;
+      margin: var(--space-xs) 0;
+    }
+    .ln-count {
+      display: inline-block;
+      min-width: 2ch;
+      font-weight: 600;
+      color: var(--accent-legible);
+    }
+    .ln-favs,
+    .ln-notes {
+      margin: var(--space-xs) 0 0;
+    }
+    .ln-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: var(--space-sm);
+    }
   </style>
+
+  <script>
+    import { nameKey } from "../../lib/service-log";
+
+    type NightVM = {
+      id: number;
+      service_date: string;
+      opened_at: string | null;
+      closed_at: string | null;
+      notes: string | null;
+      guests: string[];
+      drinks: { name: string; count: number }[];
+      attributions: { guest: string; drink: string }[];
+    };
+
+    // Admin-only island: absent for signed-out visitors, so this no-ops.
+    const island = document.getElementById("log-data");
+    if (island) initServiceLog(JSON.parse(island.textContent ?? "{}"));
+
+    function initServiceLog(data: {
+      slug: string;
+      nights: NightVM[];
+      knownGuests: string[];
+      offMenuDrinks: string[];
+      menu: string[];
+    }) {
+      const $ = (id: string) => document.getElementById(id)!;
+      const openBtn = $("log-open") as HTMLButtonElement;
+      const form = $("log-form") as HTMLFormElement;
+      const title = $("lf-title");
+      const errorBox = $("lf-error");
+      const errorMsg = $("lf-error-msg");
+      const dateIn = $("lf-date") as HTMLInputElement;
+      const openIn = $("lf-open") as HTMLInputElement;
+      const closeIn = $("lf-close") as HTMLInputElement;
+      const notesIn = $("lf-notes") as HTMLTextAreaElement;
+      const chipRow = $("lf-guest-chips");
+      const guestIn = $("lf-guest-in") as HTMLInputElement;
+      const drinkIn = $("lf-drink-in") as HTMLInputElement;
+      const tally = $("lf-tally");
+      const rowTpl = $("lf-row-tpl") as HTMLTemplateElement;
+      const attrDetails = $("lf-attr") as HTMLDetailsElement;
+      const attrBody = $("lf-attr-body");
+      const deleteBtn = $("lf-delete") as HTMLButtonElement;
+
+      const SEP = "\u0000";
+      const menuRows = data.menu.map((name) => ({ name, key: nameKey(name) }));
+      const menuKeys = new Set(menuRows.map((r) => r.key));
+
+      let editingId: number | null = null;
+      let guests: { name: string; key: string }[] = [];
+      let extras: { name: string; key: string }[] = []; // off-menu rows in the tally
+      let attrs = new Set<string>(); // `${guestKey}\u0000${drinkKey}`
+
+      const showError = (msg: string) => {
+        errorMsg.textContent = msg;
+        errorBox.classList.remove("is-hidden");
+      };
+
+      function buildTally(counts: Map<string, number>) {
+        tally.innerHTML = "";
+        for (const d of [...menuRows, ...extras]) {
+          const node = rowTpl.content.firstElementChild!.cloneNode(true) as HTMLElement;
+          node.dataset.key = d.key;
+          node.dataset.name = d.name;
+          node.querySelector(".lf-row-name")!.textContent = d.name;
+          const input = node.querySelector("input")!;
+          input.setAttribute("aria-label", `How many: ${d.name}`);
+          const c = counts.get(d.key) ?? 0;
+          if (c > 0) input.value = String(c);
+          tally.appendChild(node);
+        }
+      }
+
+      function readCounts(): { name: string; key: string; count: number }[] {
+        return [...tally.querySelectorAll<HTMLElement>(".lf-row")].map((row) => ({
+          name: row.dataset.name!,
+          key: row.dataset.key!,
+          count: Math.max(0, Math.floor(Number(row.querySelector("input")!.value) || 0)),
+        }));
+      }
+
+      function renderChips() {
+        chipRow.innerHTML = "";
+        for (const g of guests) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "button ghost sm lf-chip";
+          b.textContent = `${g.name} ✕`;
+          b.setAttribute("aria-label", `Remove ${g.name}`);
+          b.addEventListener("click", () => {
+            guests = guests.filter((x) => x.key !== g.key);
+            attrs = new Set([...attrs].filter((k) => !k.startsWith(g.key + SEP)));
+            renderChips();
+            renderAttr();
+          });
+          chipRow.appendChild(b);
+        }
+      }
+
+      // Guests × counted drinks; a pressed chip = "this was one of the guest's
+      // favorites that night" — a stated preference, not a record of consumption.
+      function renderAttr() {
+        if (!attrDetails.open) return;
+        const counted = readCounts().filter((d) => d.count > 0);
+        attrBody.innerHTML = "";
+        if (guests.length === 0 || counted.length === 0) {
+          const p = document.createElement("p");
+          p.className = "muted";
+          p.textContent = "add guests and a few drinks first.";
+          attrBody.appendChild(p);
+          return;
+        }
+        for (const g of guests) {
+          const row = document.createElement("div");
+          row.className = "lf-attr-row";
+          const label = document.createElement("span");
+          label.className = "lf-attr-name";
+          label.textContent = g.name;
+          row.appendChild(label);
+          for (const d of counted) {
+            const b = document.createElement("button");
+            b.type = "button";
+            const k = g.key + SEP + d.key;
+            const on = attrs.has(k);
+            b.className = on ? "button sm" : "button ghost sm";
+            b.setAttribute("aria-pressed", String(on));
+            b.textContent = d.name;
+            b.addEventListener("click", () => {
+              if (attrs.has(k)) attrs.delete(k);
+              else attrs.add(k);
+              renderAttr();
+            });
+            row.appendChild(b);
+          }
+          attrBody.appendChild(row);
+        }
+      }
+
+      function addGuest() {
+        const name = guestIn.value.trim();
+        if (!name) return;
+        const key = nameKey(name);
+        if (key && !guests.some((g) => g.key === key)) {
+          guests.push({ name, key });
+          renderChips();
+          renderAttr();
+        }
+        guestIn.value = "";
+        guestIn.focus();
+      }
+
+      function addDrink() {
+        const name = drinkIn.value.trim();
+        if (!name) return;
+        const key = nameKey(name);
+        if (key && !menuKeys.has(key) && !extras.some((d) => d.key === key)) {
+          const counts = new Map(readCounts().map((d) => [d.key, d.count]));
+          extras.push({ name, key });
+          counts.set(key, counts.get(key) || 1);
+          buildTally(counts);
+        }
+        drinkIn.value = "";
+        const row = tally.querySelector<HTMLElement>(`[data-key="${CSS.escape(key)}"]`);
+        row?.querySelector("input")?.focus();
+        renderAttr();
+      }
+
+      function localToday(): string {
+        const d = new Date();
+        const mm = String(d.getMonth() + 1).padStart(2, "0");
+        const dd = String(d.getDate()).padStart(2, "0");
+        return `${d.getFullYear()}-${mm}-${dd}`;
+      }
+
+      function openForm(night: NightVM | null) {
+        editingId = night?.id ?? null;
+        title.textContent = night ? "Edit night" : "New night";
+        dateIn.value = night?.service_date ?? localToday();
+        openIn.value = night?.opened_at ?? "";
+        closeIn.value = night?.closed_at ?? "";
+        notesIn.value = night?.notes ?? "";
+        guests = (night?.guests ?? []).map((name) => ({ name, key: nameKey(name) }));
+        extras = (night?.drinks ?? [])
+          .filter((d) => !menuKeys.has(nameKey(d.name)))
+          .map((d) => ({ name: d.name, key: nameKey(d.name) }));
+        attrs = new Set(
+          (night?.attributions ?? []).map((a) => nameKey(a.guest) + SEP + nameKey(a.drink)),
+        );
+        buildTally(new Map((night?.drinks ?? []).map((d) => [nameKey(d.name), d.count])));
+        renderChips();
+        attrDetails.open = attrs.size > 0;
+        renderAttr();
+        deleteBtn.classList.toggle("is-hidden", editingId === null);
+        errorBox.classList.add("is-hidden");
+        form.classList.remove("is-hidden");
+        openBtn.classList.add("is-hidden");
+        form.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+
+      function closeForm() {
+        form.classList.add("is-hidden");
+        openBtn.classList.remove("is-hidden");
+        editingId = null;
+      }
+
+      openBtn.addEventListener("click", () => openForm(null));
+      $("lf-cancel").addEventListener("click", closeForm);
+      $("lf-guest-add").addEventListener("click", addGuest);
+      $("lf-drink-add").addEventListener("click", addDrink);
+      for (const [input, add] of [[guestIn, addGuest], [drinkIn, addDrink]] as const) {
+        input.addEventListener("keydown", (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            add();
+          }
+        });
+      }
+      attrDetails.addEventListener("toggle", renderAttr);
+      tally.addEventListener("input", renderAttr);
+
+      document.querySelectorAll<HTMLElement>(".ln-edit").forEach((b) => {
+        b.addEventListener("click", () => {
+          const night = data.nights.find((n) => n.id === Number(b.dataset.id));
+          if (night) openForm(night);
+        });
+      });
+
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const guestKeys = new Set(guests.map((g) => g.key));
+        const counted = readCounts().filter((d) => d.count > 0);
+        const drinkNames = new Map(counted.map((d) => [d.key, d.name]));
+        const guestNames = new Map(guests.map((g) => [g.key, g.name]));
+        const payload = {
+          event_slug: data.slug,
+          service_date: dateIn.value,
+          opened_at: openIn.value || null,
+          closed_at: closeIn.value || null,
+          notes: notesIn.value.trim() || null,
+          guests: guests.map((g) => g.name),
+          drinks: counted.map((d) => ({ name: d.name, count: d.count })),
+          // Drop attributions whose guest was removed or whose drink fell to 0.
+          attributions: [...attrs]
+            .map((k) => k.split(SEP))
+            .filter(([gk, dk]) => guestKeys.has(gk) && drinkNames.has(dk))
+            .map(([gk, dk]) => ({ guest: guestNames.get(gk)!, drink: drinkNames.get(dk)! })),
+        };
+        const res = await fetch(
+          editingId ? `/api/admin/service-log/${editingId}` : "/api/admin/service-log",
+          {
+            method: editingId ? "PATCH" : "POST",
+            headers: { "content-type": "application/json" },
+            body: JSON.stringify(payload),
+          },
+        );
+        if (res.ok) {
+          location.reload();
+        } else {
+          const j = (await res.json().catch(() => null)) as { error?: string } | null;
+          showError(j?.error ?? "Didn’t take. Try again.");
+        }
+      });
+
+      deleteBtn.addEventListener("click", async () => {
+        if (!editingId || !confirm("Strike this night from the record?")) return;
+        const res = await fetch(`/api/admin/service-log/${editingId}`, { method: "DELETE" });
+        if (res.ok) location.reload();
+        else showError("Didn’t take. Try again.");
+      });
+    }
+  </script>
 </Layout>

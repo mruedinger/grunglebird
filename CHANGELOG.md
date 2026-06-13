@@ -8,6 +8,13 @@ are intentionally left out to keep this readable.
 ## 2026-06-12
 
 ### Added
+- **Service log.** `/events/framily-beach-bar-2026` gains an admin-only log for
+  transcribing each night of service from paper: date, open/close times, guests,
+  per-drink tallies (menu drinks pre-listed, off-menu free-form), optional
+  per-guest favorites, and notes. New D1 schema (migration `0006`) keeps
+  guests and drinks as consistent cross-night identities and is keyed by event
+  slug for reuse at future events. Signed-out visitors see the poster unchanged.
+  Data capture only — analytics comes later. (#72)
 - **Cheat sheets.** `/cocktails` gains a "Cheat Sheets" section between recipes
   and inventory: a static quick-conversion table (deliberately imprecise head-math
   values) and a curated preferred-bottles table mapping generic recipe ingredients to
