@@ -278,7 +278,8 @@ const logJson = JSON.stringify({
         </div>
 
         <details class="lf-attr" id="lf-attr">
-          <summary>Who had what <span class="muted">(optional)</span></summary>
+          <summary>Favorites <span class="muted">(optional)</span></summary>
+          <p class="help">What each guest favored — not a record of everything they drank.</p>
           <div class="lf-attr-body" id="lf-attr-body"></div>
         </details>
 
@@ -304,6 +305,13 @@ const logJson = JSON.stringify({
       <div class="log-nights" id="log-nights">
         {nights.map((n) => {
           const total = n.drinks.reduce((s, d) => s + d.count, 0);
+          // Favorites read per guest ("Sara: Daiquiri"), not per drink.
+          const favs = n.guests
+            .map((g) => ({
+              guest: g,
+              drinks: n.attributions.filter((a) => a.guest === g).map((a) => a.drink),
+            }))
+            .filter((x) => x.drinks.length > 0);
           return (
             <details class="card log-night">
               <summary>
@@ -325,18 +333,20 @@ const logJson = JSON.stringify({
                 {n.guests.length > 0 && <p class="ln-guests">{n.guests.join(', ')}</p>}
                 {n.drinks.length > 0 && (
                   <ul class="ln-tally">
-                    {n.drinks.map((d) => {
-                      const who = n.attributions
-                        .filter((a) => a.drink === d.name)
-                        .map((a) => a.guest);
-                      return (
-                        <li>
-                          <span class="ln-count">{d.count}</span> {d.name}
-                          {who.length > 0 && <span class="muted"> — {who.join(', ')}</span>}
-                        </li>
-                      );
-                    })}
+                    {n.drinks.map((d) => (
+                      <li>
+                        <span class="ln-count">{d.count}</span> {d.name}
+                      </li>
+                    ))}
                   </ul>
+                )}
+                {favs.length > 0 && (
+                  <p class="ln-favs">
+                    <span class="muted">favorites — </span>
+                    {favs.map((x, i) => (
+                      <Fragment>{i > 0 && '; '}{x.guest}: {x.drinks.join(', ')}</Fragment>
+                    ))}
+                  </p>
                 )}
                 {n.notes && <p class="ln-notes">{n.notes}</p>}
                 <div class="ln-actions">
@@ -627,6 +637,7 @@ const logJson = JSON.stringify({
       font-weight: 600;
       color: var(--accent-legible);
     }
+    .ln-favs,
     .ln-notes {
       margin: var(--space-xs) 0 0;
     }
@@ -736,7 +747,8 @@ const logJson = JSON.stringify({
         }
       }
 
-      // Guests × counted drinks; a pressed chip = "this guest had this drink".
+      // Guests × counted drinks; a pressed chip = "this was one of the guest's
+      // favorites that night" — a stated preference, not a record of consumption.
       function renderAttr() {
         if (!attrDetails.open) return;
         const counted = readCounts().filter((d) => d.count > 0);
@@ -744,7 +756,7 @@ const logJson = JSON.stringify({
         if (guests.length === 0 || counted.length === 0) {
           const p = document.createElement("p");
           p.className = "muted";
-          p.textContent = "add guests and drink counts first.";
+          p.textContent = "add guests and a few drinks first.";
           attrBody.appendChild(p);
           return;
         }
