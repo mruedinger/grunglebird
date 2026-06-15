@@ -5,6 +5,17 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-15
+
+### Added
+- **Beach bar stats.** `/events/framily-beach-bar-2026` gains a public, read-only
+  Stats section below the menu: overall callouts (drinks poured, unique guests,
+  house favorite, drinks in rotation), a drinks-per-night chart, a top-drinks
+  ranking, and a per-night breakdown that's collapsed by default and expands to
+  that night's drink tally. Sourced strictly from the service log's night-level
+  aggregates — no guest names or per-guest data reach the public view. No schema
+  change. (#75)
+
 ## 2026-06-12
 
 ### Added

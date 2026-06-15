@@ -134,12 +134,98 @@ if (isAdmin) {
   offMenuDrinks = allDrinks.results.map((d) => d.name).filter((n) => !menuKeys.has(nameKey(n)));
 }
 
+// ─── Public stats (#75): night-level AGGREGATES only, visible to everyone. These
+// queries never join service_guests and never touch service_night_guest_drinks —
+// the public view is pure aggregate, so no individual is identifiable. Drink names
+// are fine; guest data is counts only. Runs for every visitor, signed in or not. ───
+type StatNight = {
+  date: string;
+  total: number;
+  guests: number;
+  drinks: { name: string; count: number }[];
+};
+
+const [statNightRows, statDrinkRows, statGuestRows, statUniqueRow] = await Promise.all([
+  env.DB.prepare(
+    `SELECT id, service_date FROM service_nights
+     WHERE event_slug = ? ORDER BY service_date ASC, id ASC`,
+  ).bind(EVENT_SLUG).all<{ id: number; service_date: string }>(),
+  env.DB.prepare(
+    `SELECT nd.night_id, d.name, nd.count
+     FROM service_night_drinks nd
+     JOIN service_drinks d ON d.id = nd.drink_id
+     JOIN service_nights n ON n.id = nd.night_id
+     WHERE n.event_slug = ?`,
+  ).bind(EVENT_SLUG).all<{ night_id: number; name: string; count: number }>(),
+  // COUNT(*) per night = distinct guests that night (UNIQUE night_id,guest_id).
+  env.DB.prepare(
+    `SELECT ng.night_id, COUNT(*) AS guests
+     FROM service_night_guests ng
+     JOIN service_nights n ON n.id = ng.night_id
+     WHERE n.event_slug = ?
+     GROUP BY ng.night_id`,
+  ).bind(EVENT_SLUG).all<{ night_id: number; guests: number }>(),
+  // Overall unique guests = distinct identities across nights, NOT a sum of the
+  // nightly counts — a repeat visitor must count once.
+  env.DB.prepare(
+    `SELECT COUNT(DISTINCT ng.guest_id) AS guests
+     FROM service_night_guests ng
+     JOIN service_nights n ON n.id = ng.night_id
+     WHERE n.event_slug = ?`,
+  ).bind(EVENT_SLUG).first<{ guests: number }>(),
+]);
+
+// Deterministic ordering everywhere: quantity desc, then name asc.
+const byCountThenName = (a: { name: string; count: number }, b: { name: string; count: number }) =>
+  b.count - a.count || a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
+
+const guestCountByNight = new Map(statGuestRows.results.map((r) => [r.night_id, r.guests]));
+
+const statNights: StatNight[] = statNightRows.results.map((n) => {
+  const drinks = statDrinkRows.results
+    .filter((d) => d.night_id === n.id)
+    .map((d) => ({ name: d.name, count: d.count }))
+    .sort(byCountThenName);
+  return {
+    date: n.service_date,
+    total: drinks.reduce((s, d) => s + d.count, 0),
+    guests: guestCountByNight.get(n.id) ?? 0,
+    drinks,
+  };
+});
+
+// Overall aggregates. Total reconciles with the admin per-night sums by construction.
+const overallDrinks = statNights.reduce((s, n) => s + n.total, 0);
+const overallGuests = statUniqueRow?.guests ?? 0;
+const drinkTotals = new Map<string, number>();
+for (const d of statDrinkRows.results) {
+  drinkTotals.set(d.name, (drinkTotals.get(d.name) ?? 0) + d.count);
+}
+const topDrinks = [...drinkTotals.entries()]
+  .map(([name, count]) => ({ name, count }))
+  .sort(byCountThenName);
+const drinkVariety = topDrinks.length;
+const mostPopular = topDrinks[0] ?? null;
+const TOP_N = 8;
+const topDrinksShown = topDrinks.slice(0, TOP_N);
+const topDrinksMore = topDrinks.length - topDrinksShown.length;
+
+// Chart scaling — guard divide-by-zero on a zero-drink run (bars collapse to 0).
+const maxNightTotal = Math.max(0, ...statNights.map((n) => n.total));
+const maxDrinkTotal = topDrinksShown[0]?.count ?? 0;
+
 // Parts-built local date — new Date("YYYY-MM-DD") parses as UTC and can shift a day.
 function dateLabel(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
   });
+}
+
+// Compact label for the trend chart's x-axis.
+function shortDate(iso: string): string {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // Guard the inline JSON island against a literal "</script>" in night text.
@@ -209,6 +295,112 @@ const logJson = JSON.stringify({
       </article>
 
       <p class="poster-muted">(and more!)</p>
+    </section>
+
+    <section class="stats">
+      <h2>Stats</h2>
+      <p class="poster-muted stats-intro">Tallied off the legal pad. Margin of error: the legal pad.</p>
+
+      {statNights.length === 0 ? (
+        <p class="poster-muted stats-empty">Bar's not open yet. Nothing to count.</p>
+      ) : (
+        <Fragment>
+          <div class="stat-callouts">
+            <div class="stat-callout">
+              <span class="stat-num">{overallDrinks}</span>
+              <span class="stat-cap">drinks poured</span>
+            </div>
+            <div class="stat-callout">
+              <span class="stat-num">{overallGuests}</span>
+              <span class="stat-cap">guests served</span>
+            </div>
+            <div class="stat-callout">
+              <span class="stat-num stat-num-text">{mostPopular ? mostPopular.name : '—'}</span>
+              <span class="stat-cap">house favorite</span>
+            </div>
+            <div class="stat-callout">
+              <span class="stat-num">{drinkVariety}</span>
+              <span class="stat-cap">drinks in rotation</span>
+            </div>
+          </div>
+
+          <figure class="chart chart-nights">
+            <figcaption>Pours per night</figcaption>
+            <div class="bars-v">
+              {statNights.map((n) => (
+                <div class="bar-v-col">
+                  <span class="bar-v-val">{n.total}</span>
+                  <div class="bar-v-track">
+                    <div
+                      class="bar-v-fill"
+                      style={`--h:${maxNightTotal ? Math.round((n.total / maxNightTotal) * 100) : 0}%`}
+                    ></div>
+                  </div>
+                  <span class="bar-v-label">{shortDate(n.date)}</span>
+                </div>
+              ))}
+            </div>
+          </figure>
+
+          <figure class="chart chart-top">
+            <figcaption>Top of the rail</figcaption>
+            {mostPopular ? (
+              <Fragment>
+                <ol class="bars-h">
+                  {topDrinksShown.map((d) => (
+                    <li class="bar-h-row">
+                      <span class="bar-h-name">{d.name}</span>
+                      <span class="bar-h-track">
+                        <span
+                          class="bar-h-fill"
+                          style={`--w:${maxDrinkTotal ? Math.round((d.count / maxDrinkTotal) * 100) : 0}%`}
+                        ></span>
+                      </span>
+                      <span class="bar-h-val">{d.count}</span>
+                    </li>
+                  ))}
+                </ol>
+                {topDrinksMore > 0 && (
+                  <p class="poster-muted bars-h-more">+{topDrinksMore} more on the board</p>
+                )}
+              </Fragment>
+            ) : (
+              <p class="poster-muted">no pours logged yet</p>
+            )}
+          </figure>
+
+          <div class="stat-nights">
+            <p class="stat-nights-hint poster-muted">Each night's tab. Tap to unfold.</p>
+            {statNights.map((n) => (
+              <details class="stat-night">
+                <summary>
+                  <span class="sn-date">{dateLabel(n.date)}</span>
+                  <span class="sn-meta poster-muted">
+                    {[
+                      `${n.total} ${n.total === 1 ? 'drink' : 'drinks'}`,
+                      n.guests > 0 && `${n.guests} ${n.guests === 1 ? 'guest' : 'guests'}`,
+                      n.drinks[0] && `top: ${n.drinks[0].name}`,
+                    ]
+                      .filter(Boolean)
+                      .join(' · ')}
+                  </span>
+                </summary>
+                <div class="sn-body">
+                  {n.drinks.length > 0 ? (
+                    <ul class="sn-tally">
+                      {n.drinks.map((d) => (
+                        <li><span class="sn-count">{d.count}</span> {d.name}</li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p class="poster-muted">no pours logged this night</p>
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        </Fragment>
+      )}
     </section>
   </main>
 
@@ -502,6 +694,203 @@ const logJson = JSON.stringify({
     .heart { color: var(--poster-sunset); }
 
     .poster-muted { color: var(--poster-ink-soft); }
+
+    /* ─── Public stats (#75) — lives INSIDE the poster island, so it's a bespoke
+         visual built from the poster's local palette. Aggregates only; no shared
+         primitives reach in. Charts are CSS bars (no SVG, no JS) — the only inline
+         style is a per-bar `--h`/`--w` ratio; all color/shape lives here. ─── */
+    .stats { margin-top: 1rem; }
+    .stats-intro { margin: 0 0 1.5rem; font-size: 0.95rem; }
+    .stats-empty { margin: 0.5rem 0 0; }
+
+    .stat-callouts {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 0.75rem;
+      max-width: 36rem;
+      margin: 0 auto 2rem;
+    }
+    @media (min-width: 560px) {
+      .stat-callouts { grid-template-columns: repeat(4, 1fr); }
+    }
+    .stat-callout {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
+      border-radius: 12px;
+      padding: 1rem 0.75rem;
+    }
+    .stat-num {
+      font-family: var(--poster-font-hero);
+      font-weight: 400;
+      font-size: 1.9rem;
+      line-height: 1;
+      color: var(--poster-sunset);
+    }
+    .stat-num-text {
+      font-family: var(--poster-font-menu);
+      font-size: 1.15rem;
+      line-height: 1.15;
+      color: var(--poster-ocean-dark);
+      overflow-wrap: anywhere;
+    }
+    .stat-cap {
+      font-size: 0.8rem;
+      letter-spacing: 0.03em;
+      color: var(--poster-ink-soft);
+    }
+
+    .chart {
+      max-width: 36rem;
+      margin: 0 auto 2rem;
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
+      border-radius: 12px;
+      padding: 1.25rem 1rem;
+    }
+    .chart figcaption {
+      font-family: var(--poster-font-menu);
+      font-size: 1.15rem;
+      letter-spacing: 0.05em;
+      color: var(--poster-ocean-dark);
+      margin-bottom: 1rem;
+    }
+
+    /* Chart A — drinks per night (vertical bars) */
+    .bars-v {
+      display: flex;
+      align-items: flex-end;
+      justify-content: center;
+      gap: 0.5rem;
+    }
+    .bar-v-col {
+      flex: 1 1 0;
+      max-width: 4rem;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.35rem;
+    }
+    .bar-v-val {
+      font-weight: 600;
+      font-size: 0.85rem;
+      color: var(--poster-ink);
+    }
+    .bar-v-track {
+      width: 100%;
+      height: 110px;
+      display: flex;
+      align-items: flex-end;
+    }
+    .bar-v-fill {
+      width: 100%;
+      height: var(--h);
+      min-height: 3px;
+      border-radius: 6px 6px 0 0;
+      background: linear-gradient(var(--poster-ocean), var(--poster-ocean-dark));
+    }
+    .bar-v-label {
+      font-size: 0.7rem;
+      color: var(--poster-ink-soft);
+      white-space: nowrap;
+    }
+
+    /* Chart B — top drinks by quantity (horizontal bars) */
+    .bars-h {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      gap: 0.5rem;
+      text-align: left;
+    }
+    .bar-h-row {
+      display: grid;
+      grid-template-columns: minmax(5.5rem, 9rem) 1fr 2.5ch;
+      align-items: center;
+      gap: 0.5rem;
+    }
+    .bar-h-name {
+      font-size: 0.8rem;
+      color: var(--poster-ink);
+      overflow-wrap: anywhere;
+    }
+    .bar-h-track {
+      display: block;
+      height: 0.7rem;
+      border-radius: 999px;
+      background: var(--poster-line);
+      overflow: hidden;
+    }
+    .bar-h-fill {
+      display: block;
+      width: var(--w);
+      min-width: 3px;
+      height: 100%;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--poster-ocean), var(--poster-sunset));
+    }
+    .bar-h-val {
+      font-weight: 600;
+      font-size: 0.8rem;
+      text-align: right;
+      color: var(--poster-ink);
+    }
+    .bars-h-more { margin: 0.75rem 0 0; font-size: 0.8rem; }
+
+    /* Per-night collapsed rows (native <details>, daily granularity) */
+    .stat-nights {
+      max-width: 36rem;
+      margin: 0 auto;
+      text-align: left;
+    }
+    .stat-nights-hint {
+      text-align: center;
+      font-size: 0.8rem;
+      margin: 0 0 0.75rem;
+    }
+    .stat-night {
+      background: var(--poster-paper);
+      border: 1px solid var(--poster-line);
+      border-radius: 12px;
+      padding: 0.75rem 1rem;
+      margin-bottom: 0.5rem;
+    }
+    .stat-night summary {
+      cursor: pointer;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: 0.25rem 0.75rem;
+    }
+    .sn-date {
+      font-family: var(--poster-font-name);
+      font-weight: 600;
+      color: var(--poster-ink);
+    }
+    .sn-meta { font-size: 0.8rem; }
+    .sn-body { margin-top: 0.75rem; }
+    .sn-tally {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(11rem, 1fr));
+      gap: 0.25rem 1rem;
+    }
+    .sn-tally li {
+      font-size: 0.85rem;
+      color: var(--poster-ink);
+    }
+    .sn-count {
+      display: inline-block;
+      min-width: 2ch;
+      font-weight: 700;
+      color: var(--poster-sunset);
+    }
 
     /* ─── Service log (#72) — admin-only, OUTSIDE the poster island. Shared-system
        UI: every primitive comes from global.css (retinted by the beach theme);
