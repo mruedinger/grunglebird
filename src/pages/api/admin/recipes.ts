@@ -23,9 +23,9 @@ export const POST: APIRoute = async ({ request }) => {
   // so a failure anywhere rolls the whole recipe back.
   const stmts = [
     env.DB.prepare(
-      `INSERT INTO recipes (name, micro, type, character, method, notes)
-       VALUES (?, ?, ?, ?, ?, ?)`,
-    ).bind(v.name, v.micro, v.type, v.character, v.method, v.notes),
+      `INSERT INTO recipes (name, micro, type, character, method, notes, yield_amount, yield_unit)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+    ).bind(v.name, v.micro, v.type, v.character, v.method, v.notes, v.yield_amount, v.yield_unit),
     ...v.lines.map((l, i) =>
       env.DB.prepare(
         `INSERT INTO recipe_lines (recipe_id, ingredient_id, amount, unit, is_garnish, position)

@@ -1,23 +1,350 @@
 ---
 import Layout from "../layouts/Layout.astro";
+import { env } from "cloudflare:workers";
+import { buildCostEngine, formatCents, type CostIngredient } from "../lib/cost";
+import { formatAmount, normalizeSearch } from "../lib/recipes";
+
+type IngredientRow = CostIngredient;
+type RecipeRow = { id: number; name: string; yield_amount: number | null; yield_unit: string | null };
+type LineRow = { recipe_id: number; ingredient_id: number; amount: number | null; unit: string };
+
+// Public read — the whole catalog graph, costed server-side in one pass.
+const [{ results: ingredients }, { results: recipes }, { results: lines }] = await Promise.all([
+  env.DB.prepare(
+    `SELECT id, name, purchase_amount, purchase_unit, purchase_price_cents, cost_recipe_id
+     FROM ingredients`,
+  ).all<IngredientRow>(),
+  env.DB.prepare(
+    `SELECT id, name, yield_amount, yield_unit FROM recipes ORDER BY name COLLATE NOCASE`,
+  ).all<RecipeRow>(),
+  env.DB.prepare(
+    `SELECT recipe_id, ingredient_id, amount, unit FROM recipe_lines ORDER BY recipe_id, position`,
+  ).all<LineRow>(),
+]);
+
+const engine = buildCostEngine(ingredients, recipes, lines);
+
+// "each" hides its unit (5 limes); a no-amount line shows just a dash.
+const amtLabel = (amount: number | null, unit: string) =>
+  amount == null
+    ? "—"
+    : [formatAmount(amount), unit === "each" ? "" : unit].filter(Boolean).join(" ");
+
+const costRows = recipes.map((r) => {
+  const c = engine.recipeCost(r.id);
+  const lineViews = c.lines.map((l) => ({
+    amt: amtLabel(l.amount, l.unit),
+    ingredient: l.ingredient,
+    cost: l.cents == null ? null : formatCents(l.cents),
+    reason: l.reason,
+    partial: l.partial,
+  }));
+  return {
+    id: r.id,
+    name: r.name,
+    knownCents: c.knownCents,
+    partial: c.partialLines > 0,
+    search: normalizeSearch([r.name, ...c.lines.map((l) => l.ingredient)].join("\n")),
+    lines: lineViews,
+  };
+});
+
+const emptyText = "nothing to price yet.";
 ---
 
-<Layout
-  title="Tools — grunglebird"
-  description="Bar tools — spirit finder and more."
-  active="tools"
->
+<Layout title="Tools — grunglebird" description="Bar tools — cost estimator and more." active="tools">
   <main class="container">
     <h1 class="hero">Tools</h1>
-    <p class="copy muted">We have to find them first…</p>
 
     <div class="section-head">
       <h2>Spirit finder</h2>
       <span class="badge">Coming soon</span>
     </div>
+
+    <section class="tool">
+      <h2>Cost Estimator</h2>
+
+      <div class="controls">
+        <div class="search-ic control-grow">
+          <span class="mag">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"></circle><line x1="21" y1="21" x2="16.5" y2="16.5"></line></svg>
+          </span>
+          <input type="search" id="cost-filter" placeholder="Search by drink or ingredient" aria-label="Search costs" autocomplete="off" />
+        </div>
+      </div>
+
+      <div class="table-frame catalog-scroll">
+        <table class="table cost-table">
+          <thead>
+            <tr>
+              <th scope="col" aria-sort="ascending">
+                <button type="button" class="th-sort" data-key="name">Name</button>
+              </th>
+              <th scope="col" aria-sort="none">
+                <button type="button" class="th-sort" data-key="cost">Est. cost</button>
+              </th>
+            </tr>
+          </thead>
+          <tbody id="cost-tbody">
+            {costRows.map((r) => (
+              <Fragment>
+                <tr
+                  class="cost-row row-click"
+                  tabindex="0"
+                  role="button"
+                  aria-expanded="false"
+                  aria-controls={`cost-detail-${r.id}`}
+                  data-id={r.id}
+                  data-name={r.name}
+                  data-cost={r.knownCents}
+                  data-search={r.search}
+                >
+                  <td>
+                    <span class="caret" aria-hidden="true">▸</span>
+                    {r.name}
+                  </td>
+                  <td class="cost-cell">
+                    {r.knownCents > 0 ? (
+                      <span class="cost-val">{r.partial ? "≥ " : ""}{formatCents(r.knownCents)}</span>
+                    ) : (
+                      <span class="muted">—</span>
+                    )}
+                    {r.partial && <span class="muted cost-flag">partial</span>}
+                  </td>
+                </tr>
+                <tr class="cost-detail" id={`cost-detail-${r.id}`} data-for={r.id} hidden>
+                  <td colspan="2">
+                    <ul class="breakdown">
+                      {r.lines.length === 0 && <li class="muted">no ingredients on file.</li>}
+                      {r.lines.map((l) => (
+                        <li class:list={["bd-line", l.partial && "is-partial"]}>
+                          <span class="bd-amt">{l.amt}</span>
+                          <span class="bd-ing">{l.ingredient}</span>
+                          <span class="bd-cost">
+                            {l.cost ?? <span class="muted">{l.reason ?? "—"}</span>}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  </td>
+                </tr>
+              </Fragment>
+            ))}
+            <tr id="cost-empty" hidden={costRows.length > 0}>
+              <td colspan="2" class="muted" id="cost-empty-msg">{emptyText}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </main>
 
+  <script>
+    import { normalizeSearch } from "../lib/recipes";
+
+    const tbody = document.getElementById("cost-tbody");
+    if (tbody) {
+      const rows = Array.from(tbody.querySelectorAll<HTMLTableRowElement>("tr.cost-row"));
+      const detailFor = (id: string) =>
+        document.getElementById(`cost-detail-${id}`) as HTMLTableRowElement | null;
+      const emptyRow = document.getElementById("cost-empty") as HTMLTableRowElement | null;
+      const emptyMsg = document.getElementById("cost-empty-msg");
+      const defaultEmptyText = emptyMsg?.textContent ?? "";
+      const search = document.getElementById("cost-filter") as HTMLInputElement | null;
+      const headers = Array.from(
+        tbody.closest("table")?.querySelectorAll<HTMLButtonElement>("button.th-sort") ?? [],
+      );
+
+      let sortKey = "name";
+      let sortDir: "asc" | "desc" = "asc";
+
+      const cmp = (a: HTMLTableRowElement, b: HTMLTableRowElement, k: string) =>
+        k === "cost"
+          ? Number(a.dataset.cost ?? 0) - Number(b.dataset.cost ?? 0)
+          : normalizeSearch(a.dataset.name ?? "").localeCompare(normalizeSearch(b.dataset.name ?? ""));
+
+      const apply = () => {
+        const q = normalizeSearch(search?.value ?? "").trim();
+        let visible = 0;
+        for (const tr of rows) {
+          const m = !q || (tr.dataset.search ?? "").includes(q);
+          tr.hidden = !m;
+          if (m) visible++;
+        }
+
+        const dir = sortDir === "asc" ? 1 : -1;
+        const sorted = [...rows].sort((a, b) => {
+          let c = cmp(a, b, sortKey) * dir;
+          if (c === 0 && sortKey !== "name") c = cmp(a, b, "name");
+          return c;
+        });
+        // re-append each summary row immediately followed by its detail row, so the pair
+        // stays glued through sort; hide (and collapse) the detail of any filtered-out row
+        for (const tr of sorted) {
+          tbody.appendChild(tr);
+          const detail = detailFor(tr.dataset.id ?? "");
+          if (detail) {
+            if (tr.hidden) {
+              detail.hidden = true;
+              tr.setAttribute("aria-expanded", "false");
+              tr.querySelector(".caret")?.replaceChildren("▸");
+            }
+            tbody.appendChild(detail);
+          }
+        }
+
+        if (emptyRow) {
+          if (emptyMsg && rows.length > 0) {
+            emptyMsg.textContent = visible === 0 ? "nothing matches." : defaultEmptyText;
+          }
+          emptyRow.hidden = !(rows.length === 0 || visible === 0);
+          tbody.appendChild(emptyRow);
+        }
+      };
+
+      const syncAria = () => {
+        for (const btn of headers) {
+          btn.closest("th")?.setAttribute(
+            "aria-sort",
+            btn.dataset.key === sortKey ? (sortDir === "asc" ? "ascending" : "descending") : "none",
+          );
+        }
+      };
+
+      for (const btn of headers) {
+        btn.addEventListener("click", () => {
+          const k = btn.dataset.key ?? "name";
+          if (k === sortKey) sortDir = sortDir === "asc" ? "desc" : "asc";
+          else {
+            sortKey = k;
+            sortDir = "asc";
+          }
+          syncAria();
+          apply();
+        });
+      }
+
+      const toggle = (tr: HTMLTableRowElement) => {
+        const detail = detailFor(tr.dataset.id ?? "");
+        if (!detail) return;
+        const open = detail.hidden;
+        detail.hidden = !open;
+        tr.setAttribute("aria-expanded", String(open));
+        tr.querySelector(".caret")?.replaceChildren(open ? "▾" : "▸");
+      };
+      for (const tr of rows) {
+        tr.addEventListener("click", () => toggle(tr));
+        tr.addEventListener("keydown", (e) => {
+          if (e.key === "Enter" || e.key === " ") {
+            e.preventDefault();
+            toggle(tr);
+          }
+        });
+      }
+
+      search?.addEventListener("input", apply);
+      syncAria();
+      apply();
+    }
+  </script>
+
   <style>
+    /* Layout only — composes the shared .table / .search-ic / .badge primitives; never
+       restyles them (see docs/styling.md). */
+    .tool {
+      margin-top: var(--space-xl);
+    }
+    .controls {
+      display: flex;
+      align-items: center;
+      gap: var(--space-sm);
+      margin: var(--space-md) 0 var(--space-lg);
+    }
+    .control-grow {
+      flex: 1 1 12rem;
+      min-width: 0;
+    }
+    /* opt-in cap on the shared .table-frame: a few rows, then sticky header + body scroll */
+    .catalog-scroll {
+      --table-max-block: 22rem;
+    }
+
+    /* sortable header: a plain text button (not the .button primitive) inside the th */
+    .th-sort {
+      font: inherit;
+      color: inherit;
+      background: none;
+      border: 0;
+      padding: 0;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .th-sort:hover {
+      opacity: 0.7;
+    }
+    th[aria-sort="ascending"] .th-sort::after {
+      content: "▲";
+    }
+    th[aria-sort="descending"] .th-sort::after {
+      content: "▼";
+    }
+
+    .row-click {
+      cursor: pointer;
+    }
+    .caret {
+      display: inline-block;
+      width: 1em;
+      color: var(--muted);
+      font-size: var(--text-sm);
+    }
+    .cost-cell {
+      white-space: nowrap;
+    }
+    .cost-val {
+      font-variant-numeric: tabular-nums;
+    }
+    .cost-flag {
+      margin-inline-start: var(--space-xs);
+      font-size: var(--text-sm);
+    }
+
+    /* breakdown detail row: a borderless inset list under its drink */
+    .cost-detail > td {
+      padding-block: 0 var(--space-sm);
+    }
+    .breakdown {
+      list-style: none;
+      margin: 0;
+      padding: var(--space-xs) 0 var(--space-xs) var(--space-md);
+      display: grid;
+      grid-template-columns: max-content 1fr max-content;
+      column-gap: var(--space-md);
+      row-gap: var(--space-2xs);
+      font-size: var(--text-sm);
+    }
+    .bd-line {
+      display: contents;
+    }
+    .bd-amt {
+      color: var(--accent);
+      font-variant-numeric: tabular-nums;
+      text-align: right;
+    }
+    .bd-ing {
+      color: var(--text);
+    }
+    .bd-cost {
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .bd-line.is-partial .bd-ing {
+      color: var(--muted);
+    }
+
     .section-head {
       display: flex;
       align-items: center;

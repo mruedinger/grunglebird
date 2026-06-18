@@ -30,9 +30,10 @@ export const PATCH: APIRoute = async ({ request, params }) => {
   // positions are re-derived from the submitted order, so they stay 0..n-1 unique.
   const stmts = [
     env.DB.prepare(
-      `UPDATE recipes SET name = ?, micro = ?, type = ?, character = ?, method = ?, notes = ?
+      `UPDATE recipes SET name = ?, micro = ?, type = ?, character = ?, method = ?, notes = ?,
+         yield_amount = ?, yield_unit = ?
        WHERE id = ?`,
-    ).bind(v.name, v.micro, v.type, v.character, v.method, v.notes, id),
+    ).bind(v.name, v.micro, v.type, v.character, v.method, v.notes, v.yield_amount, v.yield_unit, id),
     env.DB.prepare(`DELETE FROM recipe_lines WHERE recipe_id = ?`).bind(id),
     ...v.lines.map((l, i) =>
       env.DB.prepare(
@@ -63,7 +64,22 @@ export const DELETE: APIRoute = async ({ request, params }) => {
   const id = Number(params.id);
   if (!Number.isInteger(id)) return jsonError(400, 'Invalid id');
 
-  // recipe_lines cascade with the recipe.
-  await env.DB.prepare(`DELETE FROM recipes WHERE id = ?`).bind(id).run();
+  // recipe_lines cascade with the recipe. But ingredients.cost_recipe_id has NO cascade by
+  // design — a recipe still serving as an ingredient's cost source must survive. Surface which
+  // ingredients hold it so the admin can unlink first.
+  try {
+    await env.DB.prepare(`DELETE FROM recipes WHERE id = ?`).bind(id).run();
+  } catch (e) {
+    if (String((e as Error).message).includes('FOREIGN KEY')) {
+      const { results } = await env.DB.prepare(
+        `SELECT name FROM ingredients WHERE cost_recipe_id = ? ORDER BY name LIMIT 5`,
+      )
+        .bind(id)
+        .all<{ name: string }>();
+      const names = results.map((r) => r.name).join(', ');
+      return jsonError(409, `Still the cost source for: ${names}. Unlink it there first.`);
+    }
+    throw e;
+  }
   return Response.json({ ok: true });
 };

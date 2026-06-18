@@ -15,6 +15,7 @@ type IngredientRow = {
   purchase_amount: number | null;
   purchase_unit: string | null;
   purchase_price_cents: number | null;
+  cost_recipe_id: number | null;
 };
 
 type RecipeRow = {
@@ -25,6 +26,8 @@ type RecipeRow = {
   character: string | null;
   method: string;
   notes: string | null;
+  yield_amount: number | null;
+  yield_unit: string | null;
 };
 
 type LineRow = {
@@ -38,12 +41,13 @@ type LineRow = {
 
 const [{ results: ingredients }, { results: recipes }, { results: lines }] = await Promise.all([
   env.DB.prepare(
-    `SELECT id, name, category, default_unit, purchase_amount, purchase_unit, purchase_price_cents
+    `SELECT id, name, category, default_unit, purchase_amount, purchase_unit, purchase_price_cents,
+            cost_recipe_id
      FROM ingredients
      ORDER BY name COLLATE NOCASE`,
   ).all<IngredientRow>(),
   env.DB.prepare(
-    `SELECT id, name, micro, type, character, method, notes
+    `SELECT id, name, micro, type, character, method, notes, yield_amount, yield_unit
      FROM recipes ORDER BY name COLLATE NOCASE`,
   ).all<RecipeRow>(),
   env.DB.prepare(
@@ -79,6 +83,8 @@ const recipeData = recipes.map((r) => {
     character: r.character,
     method: r.method.split("\n"),
     notes: r.notes,
+    yield_amount: r.yield_amount,
+    yield_unit: r.yield_unit,
     build: mine.filter((l) => !l.is_garnish).map(lineView),
     garnish: mine.filter((l) => l.is_garnish).map(lineView),
   };
@@ -275,6 +281,7 @@ const BOTTLES = [
                 data-amount={r.purchase_amount ?? ""}
                 data-punit={r.purchase_unit ?? ""}
                 data-price={r.purchase_price_cents == null ? "" : String(r.purchase_price_cents / 100)}
+                data-costrecipe={r.cost_recipe_id == null ? "" : String(r.cost_recipe_id)}
               >
                 <td>{r.name}</td>
                 <td>{r.category}</td>
@@ -360,6 +367,18 @@ const BOTTLES = [
             <div class="field">
               <label for="r-notes-in">Notes</label>
               <textarea id="r-notes-in" rows="2"></textarea>
+            </div>
+            <div class="field">
+              <label for="r-yield-amount">Yield <span class="muted">(optional — one batch makes, for cost)</span></label>
+              <div class="yield-row">
+                <input type="number" id="r-yield-amount" class="y-amount" min="0" step="any" inputmode="decimal" placeholder="amount" aria-label="Yield amount" />
+                <div class="select-wrap y-unit-wrap">
+                  <select id="r-yield-unit" aria-label="Yield unit">
+                    <option value="">unit…</option>
+                    {UNITS.map((u) => <option value={u}>{u}</option>)}
+                  </select>
+                </div>
+              </div>
             </div>
 
             <div class="modal-actions">
@@ -448,6 +467,15 @@ const BOTTLES = [
               <label for="f-price">Purchase price ($)</label>
               <input type="number" id="f-price" min="0" step="any" inputmode="decimal" autocomplete="off" />
             </div>
+            <div class="field">
+              <label for="f-cost-recipe">Cost source recipe <span class="muted">(optional — cost from a prep recipe instead)</span></label>
+              <div class="select-wrap">
+                <select id="f-cost-recipe">
+                  <option value="">— none —</option>
+                  {recipes.map((r) => <option value={r.id}>{r.name}</option>)}
+                </select>
+              </div>
+            </div>
             <div class="modal-actions">
               <button type="button" class="button danger del-action is-hidden" id="ing-delete">Delete</button>
               <button type="button" class="button ghost" id="ing-cancel">Cancel</button>
@@ -478,6 +506,8 @@ const BOTTLES = [
       character: string | null;
       method: string[];
       notes: string | null;
+      yield_amount: number | null;
+      yield_unit: string | null;
       build: RecipeLine[];
       garnish: RecipeLine[];
     };
@@ -695,6 +725,8 @@ const BOTTLES = [
         characterNew: document.getElementById("r-character-new") as HTMLInputElement,
         method: document.getElementById("r-method-in") as HTMLTextAreaElement,
         notes: document.getElementById("r-notes-in") as HTMLTextAreaElement,
+        yieldAmount: document.getElementById("r-yield-amount") as HTMLInputElement,
+        yieldUnit: document.getElementById("r-yield-unit") as unknown as HTMLSelectElement,
       };
 
       const showError = (msg: string) => {
@@ -879,6 +911,8 @@ const BOTTLES = [
           }
           f.method.value = r.method.join("\n");
           f.notes.value = r.notes ?? "";
+          f.yieldAmount.value = r.yield_amount == null ? "" : String(r.yield_amount);
+          f.yieldUnit.value = r.yield_unit ?? "";
           for (const l of r.build) addLineRow(buildBox, l);
           for (const l of r.garnish) addLineRow(garnishBox, l);
           delBtn.dataset.id = String(r.id);
@@ -968,6 +1002,8 @@ const BOTTLES = [
               : f.character.value,
           method: f.method.value,
           notes: f.notes.value,
+          yield_amount: f.yieldAmount.value,
+          yield_unit: f.yieldUnit.value,
           lines: build.lines,
           garnish_lines: garnish.lines,
         };
@@ -1013,6 +1049,7 @@ const BOTTLES = [
         amount: document.getElementById("f-amount") as HTMLInputElement,
         punit: document.getElementById("f-punit") as HTMLInputElement,
         price: document.getElementById("f-price") as HTMLInputElement,
+        costRecipe: document.getElementById("f-cost-recipe") as unknown as HTMLSelectElement,
       };
 
       const showError = (msg: string) => {
@@ -1037,6 +1074,7 @@ const BOTTLES = [
           f.amount.value = data.amount ?? "";
           f.punit.value = data.punit ?? "";
           f.price.value = data.price ?? "";
+          f.costRecipe.value = data.costrecipe ?? "";
           // snapshot the row's real identity for Delete — the name field is editable.
           delBtn.dataset.id = data.id ?? "";
           delBtn.dataset.name = data.name ?? "";
@@ -1090,6 +1128,7 @@ const BOTTLES = [
           purchase_amount: f.amount.value,
           purchase_unit: f.punit.value,
           purchase_price: f.price.value,
+          cost_recipe_id: f.costRecipe.value,
         };
         saveBtn.disabled = true;
         try {
@@ -1357,6 +1396,18 @@ const BOTTLES = [
     }
     .char-new {
       margin-top: var(--space-xs);
+    }
+    /* yield: amount input + unit select share a row */
+    .yield-row {
+      display: flex;
+      gap: var(--space-sm);
+    }
+    .yield-row .y-amount {
+      flex: 1 1 auto;
+      min-width: 0;
+    }
+    .yield-row .y-unit-wrap {
+      flex: 0 0 auto;
     }
     /* float the modal's destructive action away from Save to avoid a mis-click */
     .del-action {
