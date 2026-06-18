@@ -244,18 +244,23 @@ const trendPoints = trendRaw.map((p) => {
 // SVG polyline runs top-down (y=0 at top), so flip the floor-anchored y.
 const trendPath = trendPoints.map((p) => `${p.x},${100 - p.y}`).join(' ');
 
+// One x-axis tick per calendar date (M/D format); multiple services in a single
+// day collapse to one label, centered under that date's points.
+const tickXs = new Map<string, number[]>();
+for (const p of trendPoints) {
+  tickXs.set(p.date, [...(tickXs.get(p.date) ?? []), p.x]);
+}
+const trendTicks = [...tickXs.entries()].map(([date, xs]) => {
+  const [, m, d] = date.split('-').map(Number);
+  return { label: `${m}/${d}`, x: xs.reduce((s, v) => s + v, 0) / xs.length };
+});
+
 // Parts-built local date — new Date("YYYY-MM-DD") parses as UTC and can shift a day.
 function dateLabel(iso: string): string {
   const [y, m, d] = iso.split('-').map(Number);
   return new Date(y, m - 1, d).toLocaleDateString('en-US', {
     weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
   });
-}
-
-// Compact label for the trend chart's x-axis.
-function shortDate(iso: string): string {
-  const [y, m, d] = iso.split('-').map(Number);
-  return new Date(y, m - 1, d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
 }
 
 // Guard the inline JSON island against a literal "</script>" in night text.
@@ -355,7 +360,7 @@ const logJson = JSON.stringify({
           </div>
 
           <figure class="chart chart-nights">
-            <figcaption>Pours per night</figcaption>
+            <figcaption>Pours over time</figcaption>
             <div class="line-plot">
               {trendPoints.length > 1 && (
                 <svg class="line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
@@ -374,8 +379,8 @@ const logJson = JSON.stringify({
               ))}
             </div>
             <div class="line-axis">
-              {trendPoints.map((p) => (
-                <span class="line-tick" style={`left:${p.x}%`}>{shortDate(p.date)}</span>
+              {trendTicks.map((t) => (
+                <span class="line-tick" style={`left:${t.x}%`}>{t.label}</span>
               ))}
             </div>
           </figure>
