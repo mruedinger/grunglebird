@@ -20,6 +20,9 @@ export type ValidIngredient = {
   purchase_amount: number | null;
   purchase_unit: string | null;
   purchase_price_cents: number | null;
+  /** Optional link to a recipe whose cost stands in for this ingredient's (prep recipe
+   *  or cheaper super-juice substitute). The cost tool (#22) follows it; recipes don't. */
+  cost_recipe_id: number | null;
 };
 
 function optionalText(value: unknown): string {
@@ -47,7 +50,8 @@ export function validateIngredient(body: unknown): ValidIngredient | { error: st
   const amountText = optionalText(b.purchase_amount);
   if (amountText) {
     const n = Number(amountText);
-    if (!Number.isFinite(n) || n < 0) return { error: 'Purchase amount must be a non-negative number.' };
+    // Must be > 0: it's a divisor for the per-unit cost (#22), so 0 is meaningless.
+    if (!Number.isFinite(n) || n <= 0) return { error: 'Purchase amount must be a positive number.' };
     purchase_amount = n;
   }
 
@@ -62,5 +66,23 @@ export function validateIngredient(body: unknown): ValidIngredient | { error: st
     purchase_price_cents = Math.round(dollars * 100);
   }
 
-  return { name, category, default_unit, purchase_amount, purchase_unit, purchase_price_cents };
+  // Optional cost-source link: a positive integer recipe id, or null. Existence is enforced
+  // by the FK at write time (a friendly error if the recipe is gone).
+  let cost_recipe_id: number | null = null;
+  const costRecipeText = optionalText(b.cost_recipe_id);
+  if (costRecipeText) {
+    const n = Number(costRecipeText);
+    if (!Number.isInteger(n) || n <= 0) return { error: 'Cost source must be a valid recipe.' };
+    cost_recipe_id = n;
+  }
+
+  return {
+    name,
+    category,
+    default_unit,
+    purchase_amount,
+    purchase_unit,
+    purchase_price_cents,
+    cost_recipe_id,
+  };
 }

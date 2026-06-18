@@ -23,6 +23,11 @@ export type ValidRecipe = {
   character: string | null;
   method: string;
   notes: string | null;
+  /** Optional batch yield: how much of `yield_unit` one batch makes. The cost tool (#22)
+   *  divides the batch cost by it to derive a per-unit price for a linked ingredient.
+   *  Stored both-or-neither. */
+  yield_amount: number | null;
+  yield_unit: string | null;
   /** Build lines first, garnish after — array order is the stored position order. */
   lines: ValidRecipeLine[];
 };
@@ -87,6 +92,25 @@ export function validateRecipe(body: unknown): ValidRecipe | { error: string } {
   const notes = text(b.notes);
   if (notes.length > 1000) return { error: 'Notes are too long (max 1000 characters).' };
 
+  // Yield is optional but both-or-neither: an amount needs a unit to mean anything, and a
+  // bare unit has nothing to divide. Unit comes from the shared list; amount must be > 0.
+  let yield_amount: number | null = null;
+  let yield_unit: string | null = null;
+  const yieldAmountText = text(b.yield_amount);
+  const yieldUnitText = text(b.yield_unit);
+  if (yieldAmountText || yieldUnitText) {
+    if (!yieldAmountText || !yieldUnitText) {
+      return { error: 'Yield needs both an amount and a unit (or leave both blank).' };
+    }
+    const n = Number(yieldAmountText);
+    if (!Number.isFinite(n) || n <= 0) return { error: 'Yield amount must be a positive number.' };
+    if (!(UNITS as readonly string[]).includes(yieldUnitText)) {
+      return { error: 'Yield unit must be one of the standard units.' };
+    }
+    yield_amount = n;
+    yield_unit = yieldUnitText;
+  }
+
   const rawBuild = Array.isArray(b.lines) ? b.lines : [];
   const rawGarnish = Array.isArray(b.garnish_lines) ? b.garnish_lines : [];
   if (rawBuild.length === 0) return { error: 'At least one ingredient line is required.' };
@@ -112,6 +136,8 @@ export function validateRecipe(body: unknown): ValidRecipe | { error: string } {
     character: (CHARACTER_REQUIRED_TYPES as readonly string[]).includes(type) ? character : null,
     method,
     notes: notes || null,
+    yield_amount,
+    yield_unit,
     lines,
   };
 }

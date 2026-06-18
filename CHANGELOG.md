@@ -5,6 +5,22 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-18
+
+### Added
+- **Cost estimator.** `/tools` gains a public "Cost" section: a sortable, searchable
+  table with one row per recipe, each expandable to a per-ingredient breakdown.
+  Estimates come from the ingredients' price-fallback data and degrade gracefully — a
+  missing price, a missing yield, or a unit we can't convert yet shows a clearly-marked
+  partial with the known subtotal still totalled (never a block). An ingredient can draw
+  its cost from a prep recipe (simple syrup) or a cheaper prep substitute (lime juice →
+  super juice) through a new cost-source link, and recipes carry an optional batch yield
+  so a prep's cost becomes a per-unit price. New D1 columns (migration `0007`):
+  `ingredients.cost_recipe_id` and `recipes.yield_amount`/`yield_unit`, edited from the
+  existing `/cocktails` admin modals. Cost stays off the recipe view by design.
+  Cross-unit conversion is deferred to #24; until it lands, mismatched-unit lines read
+  partial. (#22)
+
 ## 2026-06-15
 
 ### Added

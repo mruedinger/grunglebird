@@ -24,8 +24,9 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const row = await env.DB.prepare(
       `INSERT INTO ingredients
-         (name, category, default_unit, purchase_amount, purchase_unit, purchase_price_cents, price_updated_at)
-       VALUES (?, ?, ?, ?, ?, ?, ?)
+         (name, category, default_unit, purchase_amount, purchase_unit, purchase_price_cents,
+          price_updated_at, cost_recipe_id)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?)
        RETURNING id`,
     )
       .bind(
@@ -36,14 +37,19 @@ export const POST: APIRoute = async ({ request }) => {
         v.purchase_unit,
         v.purchase_price_cents,
         priceUpdatedAt,
+        v.cost_recipe_id,
       )
       .first<{ id: number }>();
 
     if (!row) return jsonError(500, 'Failed to save ingredient');
     return Response.json({ id: row.id }, { status: 201 });
   } catch (e) {
-    if (String((e as Error).message).includes('UNIQUE')) {
+    const msg = String((e as Error).message);
+    if (msg.includes('UNIQUE')) {
       return jsonError(409, 'An ingredient with that name already exists.');
+    }
+    if (msg.includes('FOREIGN KEY')) {
+      return jsonError(400, 'That cost-source recipe no longer exists. Reload and try again.');
     }
     throw e;
   }

@@ -41,7 +41,7 @@ export const PATCH: APIRoute = async ({ request, params }) => {
     await env.DB.prepare(
       `UPDATE ingredients
          SET name = ?, category = ?, default_unit = ?, purchase_amount = ?,
-             purchase_unit = ?, purchase_price_cents = ?, price_updated_at = ?
+             purchase_unit = ?, purchase_price_cents = ?, price_updated_at = ?, cost_recipe_id = ?
        WHERE id = ?`,
     )
       .bind(
@@ -52,13 +52,18 @@ export const PATCH: APIRoute = async ({ request, params }) => {
         v.purchase_unit,
         v.purchase_price_cents,
         priceUpdatedAt,
+        v.cost_recipe_id,
         id,
       )
       .run();
     return Response.json({ ok: true });
   } catch (e) {
-    if (String((e as Error).message).includes('UNIQUE')) {
+    const msg = String((e as Error).message);
+    if (msg.includes('UNIQUE')) {
       return jsonError(409, 'An ingredient with that name already exists.');
+    }
+    if (msg.includes('FOREIGN KEY')) {
+      return jsonError(400, 'That cost-source recipe no longer exists. Reload and try again.');
     }
     throw e;
   }
