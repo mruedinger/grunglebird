@@ -56,9 +56,13 @@ const emptyText = "nothing to price yet.";
   <main class="container">
     <h1 class="hero">Tools</h1>
 
+    <div class="section-head">
+      <h2>Spirit finder</h2>
+      <span class="badge">Coming soon</span>
+    </div>
+
     <section class="tool">
-      <h2>Cost</h2>
-      <p class="copy muted">rough math on what a pour runs — before the good bottle ruins it.</p>
+      <h2>Cost Estimator</h2>
 
       <div class="controls">
         <div class="search-ic control-grow">
@@ -132,13 +136,7 @@ const emptyText = "nothing to price yet.";
           </tbody>
         </table>
       </div>
-      <p class="copy muted note">“partial” means some lines have no price yet, or a unit we can't convert until the converter lands. The shown number is what we could add up.</p>
     </section>
-
-    <div class="section-head">
-      <h2>Spirit finder</h2>
-      <span class="badge">Coming soon</span>
-    </div>
   </main>
 
   <script>
@@ -269,10 +267,6 @@ const emptyText = "nothing to price yet.";
     /* opt-in cap on the shared .table-frame: a few rows, then sticky header + body scroll */
     .catalog-scroll {
       --table-max-block: 22rem;
-    }
-    .note {
-      margin-top: var(--space-md);
-      font-size: var(--text-sm);
     }
 
     /* sortable header: a plain text button (not the .button primitive) inside the th */
