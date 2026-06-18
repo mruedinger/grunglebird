@@ -140,16 +140,19 @@ if (isAdmin) {
 // are fine; guest data is counts only. Runs for every visitor, signed in or not. ───
 type StatNight = {
   date: string;
+  opened_at: string | null;
   total: number;
   guests: number;
   drinks: { name: string; count: number }[];
 };
 
 const [statNightRows, statDrinkRows, statGuestRows, statUniqueRow] = await Promise.all([
+  // opened_at carries the trend chart's x-position (start of service); it's bar
+  // hours, not guest data, so it's fine in the public view.
   env.DB.prepare(
-    `SELECT id, service_date FROM service_nights
+    `SELECT id, service_date, opened_at FROM service_nights
      WHERE event_slug = ? ORDER BY service_date ASC, id ASC`,
-  ).bind(EVENT_SLUG).all<{ id: number; service_date: string }>(),
+  ).bind(EVENT_SLUG).all<{ id: number; service_date: string; opened_at: string | null }>(),
   env.DB.prepare(
     `SELECT nd.night_id, d.name, nd.count
      FROM service_night_drinks nd
@@ -188,6 +191,7 @@ const statNights: StatNight[] = statNightRows.results.map((n) => {
     .sort(byCountThenName);
   return {
     date: n.service_date,
+    opened_at: n.opened_at,
     total: drinks.reduce((s, d) => s + d.count, 0),
     guests: guestCountByNight.get(n.id) ?? 0,
     drinks,
@@ -210,9 +214,35 @@ const TOP_N = 8;
 const topDrinksShown = topDrinks.slice(0, TOP_N);
 const topDrinksMore = topDrinks.length - topDrinksShown.length;
 
-// Chart scaling — guard divide-by-zero on a zero-drink run (bars collapse to 0).
+// Chart scaling — guard divide-by-zero on a zero-drink run (points sit on the floor).
 const maxNightTotal = Math.max(0, ...statNights.map((n) => n.total));
 const maxDrinkTotal = topDrinksShown[0]?.count ?? 0;
+
+// ─── Trend chart geometry: pours per night on a true *time* x-axis. Each point
+// sits at the start of that service (service_date + opened_at), so the spacing
+// reflects real elapsed time, not even slots. Computed server-side into percent
+// coords; the markup is a CSS-positioned line + dots (SVG only draws the path). ───
+function startTs(iso: string, opened: string | null): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  const [hh, mm] = (opened ?? '00:00').split(':').map(Number);
+  return new Date(y, m - 1, d, hh || 0, mm || 0).getTime();
+}
+// Inset the endpoints so edge dots/labels don't clip the plot.
+const X_PAD = 6;
+const trendRaw = statNights
+  .map((n) => ({ date: n.date, total: n.total, ts: startTs(n.date, n.opened_at) }))
+  .sort((a, b) => a.ts - b.ts);
+const tsMin = Math.min(...trendRaw.map((p) => p.ts));
+const tsMax = Math.max(...trendRaw.map((p) => p.ts));
+const tsSpan = tsMax - tsMin;
+const trendPoints = trendRaw.map((p) => {
+  const xFrac = tsSpan > 0 ? (p.ts - tsMin) / tsSpan : 0.5;
+  const x = X_PAD + xFrac * (100 - 2 * X_PAD);
+  const y = maxNightTotal ? (p.total / maxNightTotal) * 100 : 0;
+  return { ...p, x, y };
+});
+// SVG polyline runs top-down (y=0 at top), so flip the floor-anchored y.
+const trendPath = trendPoints.map((p) => `${p.x},${100 - p.y}`).join(' ');
 
 // Parts-built local date — new Date("YYYY-MM-DD") parses as UTC and can shift a day.
 function dateLabel(iso: string): string {
@@ -326,18 +356,26 @@ const logJson = JSON.stringify({
 
           <figure class="chart chart-nights">
             <figcaption>Pours per night</figcaption>
-            <div class="bars-v">
-              {statNights.map((n) => (
-                <div class="bar-v-col">
-                  <span class="bar-v-val">{n.total}</span>
-                  <div class="bar-v-track">
-                    <div
-                      class="bar-v-fill"
-                      style={`--h:${maxNightTotal ? Math.round((n.total / maxNightTotal) * 100) : 0}%`}
-                    ></div>
-                  </div>
-                  <span class="bar-v-label">{shortDate(n.date)}</span>
+            <div class="line-plot">
+              {trendPoints.length > 1 && (
+                <svg class="line-svg" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true">
+                  <polyline class="line-path" points={trendPath} vector-effect="non-scaling-stroke" />
+                </svg>
+              )}
+              {trendPoints.map((p) => (
+                <div
+                  class="line-point"
+                  style={`left:${p.x}%;bottom:${p.y}%`}
+                  title={`${dateLabel(p.date)} — ${p.total} ${p.total === 1 ? 'drink' : 'drinks'}`}
+                >
+                  <span class="line-val">{p.total}</span>
+                  <span class="line-dot"></span>
                 </div>
+              ))}
+            </div>
+            <div class="line-axis">
+              {trendPoints.map((p) => (
+                <span class="line-tick" style={`left:${p.x}%`}>{shortDate(p.date)}</span>
               ))}
             </div>
           </figure>
@@ -361,7 +399,23 @@ const logJson = JSON.stringify({
                   ))}
                 </ol>
                 {topDrinksMore > 0 && (
-                  <p class="poster-muted bars-h-more">+{topDrinksMore} more on the board</p>
+                  <details class="bars-h-more">
+                    <summary class="poster-muted">+{topDrinksMore} more on the board</summary>
+                    <ol class="bars-h bars-h-rest">
+                      {topDrinks.slice(TOP_N).map((d) => (
+                        <li class="bar-h-row">
+                          <span class="bar-h-name">{d.name}</span>
+                          <span class="bar-h-track">
+                            <span
+                              class="bar-h-fill"
+                              style={`--w:${maxDrinkTotal ? Math.round((d.count / maxDrinkTotal) * 100) : 0}%`}
+                            ></span>
+                          </span>
+                          <span class="bar-h-val">{d.count}</span>
+                        </li>
+                      ))}
+                    </ol>
+                  </details>
                 )}
               </Fragment>
             ) : (
@@ -758,40 +812,60 @@ const logJson = JSON.stringify({
       margin-bottom: 1rem;
     }
 
-    /* Chart A — drinks per night (vertical bars) */
-    .bars-v {
-      display: flex;
-      align-items: flex-end;
-      justify-content: center;
-      gap: 0.5rem;
+    /* Chart A — pours per night on a time axis (CSS-positioned line + dots).
+       Coords are percentages computed server-side; the SVG only draws the path,
+       stretched to the plot box (non-scaling stroke keeps the line crisp). */
+    .line-plot {
+      position: relative;
+      height: 120px;
+      margin: 1.5rem 0.25rem 0;
+      border-bottom: 1px solid var(--poster-line);
     }
-    .bar-v-col {
-      flex: 1 1 0;
-      max-width: 4rem;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 0.35rem;
+    .line-svg {
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      overflow: visible;
     }
-    .bar-v-val {
+    .line-path {
+      fill: none;
+      stroke: var(--poster-ocean);
+      stroke-width: 2;
+      stroke-linejoin: round;
+      stroke-linecap: round;
+    }
+    .line-point {
+      position: absolute;
+      transform: translate(-50%, 50%);
+    }
+    .line-dot {
+      display: block;
+      width: 0.6rem;
+      height: 0.6rem;
+      border-radius: 999px;
+      background: var(--poster-sunset);
+      border: 2px solid var(--poster-paper);
+      box-shadow: 0 0 0 1px var(--poster-line);
+    }
+    .line-val {
+      position: absolute;
+      bottom: 100%;
+      left: 50%;
+      transform: translateX(-50%);
+      margin-bottom: 0.3rem;
       font-weight: 600;
-      font-size: 0.85rem;
+      font-size: 0.8rem;
       color: var(--poster-ink);
     }
-    .bar-v-track {
-      width: 100%;
-      height: 110px;
-      display: flex;
-      align-items: flex-end;
+    .line-axis {
+      position: relative;
+      height: 1rem;
+      margin: 0.5rem 0.25rem 0;
     }
-    .bar-v-fill {
-      width: 100%;
-      height: var(--h);
-      min-height: 3px;
-      border-radius: 6px 6px 0 0;
-      background: linear-gradient(var(--poster-ocean), var(--poster-ocean-dark));
-    }
-    .bar-v-label {
+    .line-tick {
+      position: absolute;
+      transform: translateX(-50%);
       font-size: 0.7rem;
       color: var(--poster-ink-soft);
       white-space: nowrap;
@@ -838,7 +912,14 @@ const logJson = JSON.stringify({
       text-align: right;
       color: var(--poster-ink);
     }
-    .bars-h-more { margin: 0.75rem 0 0; font-size: 0.8rem; }
+    .bars-h-more { margin: 0.75rem 0 0; }
+    .bars-h-more > summary {
+      cursor: pointer;
+      font-size: 0.8rem;
+      width: fit-content;
+    }
+    .bars-h-more[open] > summary { margin-bottom: 0.5rem; }
+    .bars-h-rest { margin-top: 0; }
 
     /* Per-night collapsed rows (native <details>, daily granularity) */
     .stat-nights {
