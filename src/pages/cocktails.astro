@@ -314,10 +314,6 @@ const BOTTLES = [
             <div class="r-scale-mult">
               <span class="r-scale-x" aria-hidden="true">×</span>
               <input type="number" id="r-scale-amount" class="r-scale-input" min="0" step="any" inputmode="decimal" value="1" aria-label="Batch multiplier" />
-              <span class="r-scale-steppers">
-                <button type="button" class="button ghost sm r-step" id="r-scale-up" aria-label="Scale up">+</button>
-                <button type="button" class="button ghost sm r-step" id="r-scale-down" aria-label="Scale down">−</button>
-              </span>
             </div>
             <button type="button" class="button ghost sm r-unit-btn" id="r-unit" aria-label="Show amounts in ml">ml</button>
           </div>
@@ -651,8 +647,6 @@ const BOTTLES = [
     // --- Scaling + unit display (issue #24): display-only, recomputed from raw amount/unit ---
     const scaleInput = document.getElementById("r-scale-amount") as HTMLInputElement;
     const unitBtn = document.getElementById("r-unit") as HTMLButtonElement;
-    // Steps walk this ladder; manual entry accepts any positive factor between/beyond rungs.
-    const SCALE_LADDER = [0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24];
     // Only real volume units convert (oz/ml/tsp). dash/each/garnish scale but never convert.
     const CONVERTIBLE = new Set(["oz", "ml", "tsp"]);
     let scale = 1;
@@ -782,20 +776,10 @@ const BOTTLES = [
     scaleInput.addEventListener("input", () => {
       const v = parseFloat(scaleInput.value);
       // empty / non-positive entry just renders at 1× without fighting what's typed in the field
+      // (the native number-input arrows fire 'input' too, so they step the scale for free)
       scale = Number.isFinite(v) && v > 0 ? v : 1;
       rerender();
     });
-    const stepScale = (dir: 1 | -1) => {
-      const next =
-        dir > 0
-          ? (SCALE_LADDER.find((r) => r > scale + 1e-9) ?? scale * 2)
-          : ([...SCALE_LADDER].reverse().find((r) => r < scale - 1e-9) ?? SCALE_LADDER[0]);
-      scale = next;
-      scaleInput.value = String(next);
-      rerender();
-    };
-    document.getElementById("r-scale-down")?.addEventListener("click", () => stepScale(-1));
-    document.getElementById("r-scale-up")?.addEventListener("click", () => stepScale(1));
     unitBtn.addEventListener("click", () => {
       unitMode = UNIT_NEXT[unitMode];
       refreshUnitBtn();
@@ -1350,9 +1334,9 @@ const BOTTLES = [
       text-align: center;
       margin: 0;
     }
-    /* view-mode scale + unit control: sits at the modal's foot. Layout only — composed from
-       .button instances (with layout-only .r-step / .r-unit-btn classes) + a scoped number
-       input; no shared primitive is restyled. */
+    /* view-mode scale + unit control: sits at the modal's foot. Layout only — composed from a
+       .button instance (with a layout-only .r-unit-btn class) + a scoped number input (native
+       up/down arrows, same as the recipe-form amount fields); no shared primitive is restyled. */
     .r-scale {
       display: flex;
       flex-wrap: wrap;
@@ -1365,34 +1349,14 @@ const BOTTLES = [
     }
     .r-scale-mult {
       display: flex;
-      align-items: stretch;
+      align-items: center;
       gap: var(--space-2xs);
     }
     .r-scale-x {
-      align-self: center;
       color: var(--muted);
     }
     .r-scale-input {
-      width: 3.5rem;
-      text-align: center;
-      -moz-appearance: textfield;
-    }
-    /* the stacked −/+ buttons are the steppers; drop the native number spinners */
-    .r-scale-input::-webkit-outer-spin-button,
-    .r-scale-input::-webkit-inner-spin-button {
-      -webkit-appearance: none;
-      appearance: none;
-      margin: 0;
-    }
-    /* +/− stacked to the right of the field */
-    .r-scale-steppers {
-      display: flex;
-      flex-direction: column;
-      gap: var(--space-2xs);
-    }
-    .r-scale-steppers .r-step {
-      flex: 1 1 0;
-      line-height: 1;
+      width: 4.5rem;
     }
     /* fixed width so the label swap (ml/oz/—) doesn't reflow the row */
     .r-unit-btn {
