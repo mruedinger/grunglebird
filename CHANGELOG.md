@@ -8,15 +8,16 @@ are intentionally left out to keep this readable.
 ## 2026-06-18
 
 ### Added
-- **Recipe scaling & units.** The recipe view gains a batch control: step or type a
-  multiplier to scale every build amount live, and one unit toggle re-expresses the
-  real-volume lines (oz/ml/tsp) between oz and ml. Garnishes stay as written; count/fuzzy
-  build units (dashes, each) scale too but never convert. Nothing is persisted — scaling
-  and conversion only change what's shown.
-  Backed by a new shared volume-conversion primitive (`src/lib/units.ts`, over ml/oz/tsp/
-  dash) that also closes the cost estimator's cross-unit gap: mismatched-unit lines that
-  read "partial" before now cost out through the same table, with trace drop/pinch amounts
-  treated as negligible rather than partial. (#24)
+- **Recipe scaling & units.** The recipe view gains a batch control at the foot of the
+  modal: step or type a multiplier to scale every build amount live, and a unit button that
+  cycles a recipe's real-volume lines (oz/ml/tsp) through as-written → ml → oz. Garnishes
+  stay as written; count/fuzzy build units (dashes, each) scale too but never convert.
+  Nothing is persisted — scaling and conversion only change what's shown.
+  Backed by a new shared conversion primitive (`src/lib/units.ts`) covering volume
+  (ml/oz/tsp/dash) plus a couple of count ratios (wedge = ⅛ each, sprig = 6 leaf). It also
+  closes the cost estimator's cross-unit gap: mismatched-unit lines that read "partial"
+  before now cost out through the same table, with trace drop/pinch amounts treated as
+  negligible rather than partial. (#24)
 - **Cost estimator.** `/tools` gains a public "Cost" section: a sortable, searchable
   table with one row per recipe, each expandable to a per-ingredient breakdown.
   Estimates come from the ingredients' price-fallback data and degrade gracefully — a

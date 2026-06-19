@@ -307,24 +307,20 @@ const BOTTLES = [
 
         <div id="r-view">
           <p class="r-micro muted" id="r-micro"></p>
-          <div class="r-scale" role="group" aria-label="Batch size and units">
-            <div class="r-scale-mult">
-              <button type="button" class="button ghost sm" id="r-scale-down" aria-label="Scale down">−</button>
-              <span class="r-scale-x" aria-hidden="true">×</span>
-              <input type="number" id="r-scale-amount" class="r-scale-input" min="0" step="any" inputmode="decimal" value="1" aria-label="Batch multiplier" />
-              <button type="button" class="button ghost sm" id="r-scale-up" aria-label="Scale up">+</button>
-            </div>
-            <div class="select-wrap r-unit-wrap">
-              <select id="r-unit" aria-label="Units">
-                <option value="">as written</option>
-                <option value="oz">oz</option>
-                <option value="ml">ml</option>
-              </select>
-            </div>
-          </div>
           <ul class="r-lines" id="r-build"></ul>
           <div class="r-method" id="r-method"></div>
           <p class="r-notes muted" id="r-notes"></p>
+          <div class="r-scale" role="group" aria-label="Batch size and units">
+            <div class="r-scale-mult">
+              <span class="r-scale-x" aria-hidden="true">×</span>
+              <input type="number" id="r-scale-amount" class="r-scale-input" min="0" step="any" inputmode="decimal" value="1" aria-label="Batch multiplier" />
+              <span class="r-scale-steppers">
+                <button type="button" class="button ghost sm r-step" id="r-scale-up" aria-label="Scale up">+</button>
+                <button type="button" class="button ghost sm r-step" id="r-scale-down" aria-label="Scale down">−</button>
+              </span>
+            </div>
+            <button type="button" class="button ghost sm r-unit-btn" id="r-unit" aria-label="Show amounts in ml">ml</button>
+          </div>
           {isAdmin && (
             <div class="modal-actions">
               <button type="button" class="button ghost sm" id="r-edit">Edit</button>
@@ -654,13 +650,26 @@ const BOTTLES = [
 
     // --- Scaling + unit display (issue #24): display-only, recomputed from raw amount/unit ---
     const scaleInput = document.getElementById("r-scale-amount") as HTMLInputElement;
-    const unitSelect = document.getElementById("r-unit") as unknown as HTMLSelectElement;
+    const unitBtn = document.getElementById("r-unit") as HTMLButtonElement;
     // Steps walk this ladder; manual entry accepts any positive factor between/beyond rungs.
     const SCALE_LADDER = [0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24];
     // Only real volume units convert (oz/ml/tsp). dash/each/garnish scale but never convert.
     const CONVERTIBLE = new Set(["oz", "ml", "tsp"]);
     let scale = 1;
-    let unitMode = ""; // "" = as written, else "oz" | "ml"
+    // Unit display cycles as-written -> ml -> oz -> as-written; the button shows the NEXT step.
+    let unitMode = ""; // "" = as written, else "ml" | "oz"
+    const UNIT_NEXT: Record<string, string> = { "": "ml", ml: "oz", oz: "" };
+    const UNIT_LABEL: Record<string, string> = { "": "—", ml: "ml", oz: "oz" };
+    const UNIT_ARIA: Record<string, string> = {
+      "": "Show amounts as written",
+      ml: "Show amounts in ml",
+      oz: "Show amounts in oz",
+    };
+    const refreshUnitBtn = () => {
+      const next = UNIT_NEXT[unitMode];
+      unitBtn.textContent = UNIT_LABEL[next];
+      unitBtn.setAttribute("aria-label", UNIT_ARIA[next]);
+    };
 
     const round2 = (n: number) => Math.round(n * 100) / 100;
     // ml reads as whole millilitres; everything else reuses the fraction display (½/¼/⅓…),
@@ -725,7 +734,7 @@ const BOTTLES = [
       scale = 1;
       unitMode = "";
       scaleInput.value = "1";
-      unitSelect.value = "";
+      refreshUnitBtn();
       const micro = document.getElementById("r-micro")!;
       micro.textContent = r.micro ?? "";
       micro.hidden = !r.micro;
@@ -787,8 +796,9 @@ const BOTTLES = [
     };
     document.getElementById("r-scale-down")?.addEventListener("click", () => stepScale(-1));
     document.getElementById("r-scale-up")?.addEventListener("click", () => stepScale(1));
-    unitSelect.addEventListener("change", () => {
-      unitMode = unitSelect.value;
+    unitBtn.addEventListener("click", () => {
+      unitMode = UNIT_NEXT[unitMode];
+      refreshUnitBtn();
       rerender();
     });
 
@@ -1340,8 +1350,9 @@ const BOTTLES = [
       text-align: center;
       margin: 0;
     }
-    /* view-mode scale + unit control: layout only — composed from .button / .select-wrap and a
-       scoped number input (no shared primitive restyled) */
+    /* view-mode scale + unit control: sits at the modal's foot. Layout only — composed from
+       .button instances (with layout-only .r-step / .r-unit-btn classes) + a scoped number
+       input; no shared primitive is restyled. */
     .r-scale {
       display: flex;
       flex-wrap: wrap;
@@ -1349,13 +1360,16 @@ const BOTTLES = [
       align-items: center;
       gap: var(--space-sm);
       margin-top: var(--space-md);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--hair);
     }
     .r-scale-mult {
       display: flex;
-      align-items: center;
+      align-items: stretch;
       gap: var(--space-2xs);
     }
     .r-scale-x {
+      align-self: center;
       color: var(--muted);
     }
     .r-scale-input {
@@ -1363,12 +1377,26 @@ const BOTTLES = [
       text-align: center;
       -moz-appearance: textfield;
     }
-    /* the −/+ buttons are the steppers; drop the native number spinners */
+    /* the stacked −/+ buttons are the steppers; drop the native number spinners */
     .r-scale-input::-webkit-outer-spin-button,
     .r-scale-input::-webkit-inner-spin-button {
       -webkit-appearance: none;
       appearance: none;
       margin: 0;
+    }
+    /* +/− stacked to the right of the field */
+    .r-scale-steppers {
+      display: flex;
+      flex-direction: column;
+      gap: var(--space-2xs);
+    }
+    .r-scale-steppers .r-step {
+      flex: 1 1 0;
+      line-height: 1;
+    }
+    /* fixed width so the label swap (ml/oz/—) doesn't reflow the row */
+    .r-unit-btn {
+      min-width: 3rem;
     }
     .r-lines {
       list-style: none;
