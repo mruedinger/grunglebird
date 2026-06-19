@@ -307,6 +307,21 @@ const BOTTLES = [
 
         <div id="r-view">
           <p class="r-micro muted" id="r-micro"></p>
+          <div class="r-scale" role="group" aria-label="Batch size and units">
+            <div class="r-scale-mult">
+              <button type="button" class="button ghost sm" id="r-scale-down" aria-label="Scale down">−</button>
+              <span class="r-scale-x" aria-hidden="true">×</span>
+              <input type="number" id="r-scale-amount" class="r-scale-input" min="0" step="any" inputmode="decimal" value="1" aria-label="Batch multiplier" />
+              <button type="button" class="button ghost sm" id="r-scale-up" aria-label="Scale up">+</button>
+            </div>
+            <div class="select-wrap r-unit-wrap">
+              <select id="r-unit" aria-label="Units">
+                <option value="">as written</option>
+                <option value="oz">oz</option>
+                <option value="ml">ml</option>
+              </select>
+            </div>
+          </div>
           <ul class="r-lines" id="r-build"></ul>
           <div class="r-method" id="r-method"></div>
           <p class="r-notes muted" id="r-notes"></p>
@@ -489,7 +504,8 @@ const BOTTLES = [
 
   <script>
     import { NO_QTY_UNITS } from "../lib/ingredients";
-    import { CHARACTER_REQUIRED_TYPES, normalizeSearch } from "../lib/recipes";
+    import { CHARACTER_REQUIRED_TYPES, formatAmount, normalizeSearch } from "../lib/recipes";
+    import { convert } from "../lib/units";
 
     type RecipeLine = {
       ingredient_id: number;
@@ -636,17 +652,54 @@ const BOTTLES = [
     const rTitle = document.getElementById("r-title")!;
     let current: Recipe | null = null;
 
+    // --- Scaling + unit display (issue #24): display-only, recomputed from raw amount/unit ---
+    const scaleInput = document.getElementById("r-scale-amount") as HTMLInputElement;
+    const unitSelect = document.getElementById("r-unit") as unknown as HTMLSelectElement;
+    // Steps walk this ladder; manual entry accepts any positive factor between/beyond rungs.
+    const SCALE_LADDER = [0.5, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24];
+    // Only real volume units convert (oz/ml/tsp). dash/each/garnish scale but never convert.
+    const CONVERTIBLE = new Set(["oz", "ml", "tsp"]);
+    let scale = 1;
+    let unitMode = ""; // "" = as written, else "oz" | "ml"
+
+    const round2 = (n: number) => Math.round(n * 100) / 100;
+    // ml reads as whole millilitres; everything else reuses the fraction display (½/¼/⅓…),
+    // 2-dp rounded so a scaled/converted amount never shows as "0.3333 oz".
+    const fmtQty = (n: number, unit: string) => {
+      const num = unit === "ml" ? String(Math.round(n)) : formatAmount(round2(n));
+      return [num, unit === "each" ? "" : unit].filter(Boolean).join(" ");
+    };
+    // A build line's amount under the current scale + unit mode. Caller only passes build lines
+    // that have an amount; garnish and no-amount lines keep their stored `amt` verbatim.
+    const scaledAmt = (l: RecipeLine) => {
+      let n = (l.amount as number) * scale;
+      let unit = l.unit;
+      if (unitMode && CONVERTIBLE.has(unit)) {
+        const c = convert(n, unit, unitMode);
+        if (c != null) {
+          n = c;
+          unit = unitMode;
+        }
+      }
+      return fmtQty(n, unit);
+    };
+
     // Garnish lines render in the same grid as the build (columns stay aligned),
     // quietly de-emphasized — optional without saying so.
     const renderLines = (ul: HTMLElement, r: Recipe) => {
       ul.textContent = "";
+      // At the 1×/as-written default, render the stored `amt` verbatim (identical to a fresh
+      // page) — only recompute once the reader actually scales or switches units, so default
+      // display never rounds a stored value (e.g. 0.375 oz stays 0.375, not 0.38).
+      const transformed = scale !== 1 || unitMode !== "";
       const append = (lines: RecipeLine[], garnish: boolean) => {
         for (const l of lines) {
           const li = document.createElement("li");
           if (garnish) li.className = "garnish";
           const amt = document.createElement("span");
           amt.className = "amt";
-          amt.textContent = l.amt;
+          // Build amounts scale (and real-volume ones convert); garnish & no-amount stay verbatim.
+          amt.textContent = transformed && !garnish && l.amount != null ? scaledAmt(l) : l.amt;
           const ing = document.createElement("span");
           ing.className = "ing";
           ing.textContent = l.ingredient;
@@ -668,6 +721,11 @@ const BOTTLES = [
     const showView = (r: Recipe) => {
       current = r;
       rTitle.textContent = r.name;
+      // every recipe opens as written, 1× — no carry-over from the last one viewed
+      scale = 1;
+      unitMode = "";
+      scaleInput.value = "1";
+      unitSelect.value = "";
       const micro = document.getElementById("r-micro")!;
       micro.textContent = r.micro ?? "";
       micro.hidden = !r.micro;
@@ -706,6 +764,32 @@ const BOTTLES = [
         const r = recipesById.get(Number(row.dataset.id));
         if (r) showView(r);
       });
+    });
+
+    // Scale + unit controls re-render the build list live (display-only).
+    const rerender = () => {
+      if (current) renderLines(document.getElementById("r-build")!, current);
+    };
+    scaleInput.addEventListener("input", () => {
+      const v = parseFloat(scaleInput.value);
+      // empty / non-positive entry just renders at 1× without fighting what's typed in the field
+      scale = Number.isFinite(v) && v > 0 ? v : 1;
+      rerender();
+    });
+    const stepScale = (dir: 1 | -1) => {
+      const next =
+        dir > 0
+          ? (SCALE_LADDER.find((r) => r > scale + 1e-9) ?? scale * 2)
+          : ([...SCALE_LADDER].reverse().find((r) => r < scale - 1e-9) ?? SCALE_LADDER[0]);
+      scale = next;
+      scaleInput.value = String(next);
+      rerender();
+    };
+    document.getElementById("r-scale-down")?.addEventListener("click", () => stepScale(-1));
+    document.getElementById("r-scale-up")?.addEventListener("click", () => stepScale(1));
+    unitSelect.addEventListener("change", () => {
+      unitMode = unitSelect.value;
+      rerender();
     });
 
     // --- Admin: recipe build/edit form inside the same modal ---
@@ -1254,6 +1338,36 @@ const BOTTLES = [
     .r-micro {
       font-style: italic;
       text-align: center;
+      margin: 0;
+    }
+    /* view-mode scale + unit control: layout only — composed from .button / .select-wrap and a
+       scoped number input (no shared primitive restyled) */
+    .r-scale {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      align-items: center;
+      gap: var(--space-sm);
+      margin-top: var(--space-md);
+    }
+    .r-scale-mult {
+      display: flex;
+      align-items: center;
+      gap: var(--space-2xs);
+    }
+    .r-scale-x {
+      color: var(--muted);
+    }
+    .r-scale-input {
+      width: 3.5rem;
+      text-align: center;
+      -moz-appearance: textfield;
+    }
+    /* the −/+ buttons are the steppers; drop the native number spinners */
+    .r-scale-input::-webkit-outer-spin-button,
+    .r-scale-input::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      appearance: none;
       margin: 0;
     }
     .r-lines {

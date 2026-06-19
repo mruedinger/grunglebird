@@ -3,9 +3,16 @@
 //
 // It degrades gracefully — a missing price, a missing yield, or a unit it can't convert
 // yields a clearly-marked PARTIAL estimate (the known subtotal still shows), never a block.
-// Cross-unit conversion (oz<->ml etc.) is issue #24's job; until that lands, a line whose
-// unit doesn't match the ingredient's priced unit is partial.
+// Cross-unit volume conversion (oz<->ml, dash, tsp) runs through the shared `convert` primitive
+// (issue #24); a line falls to partial only when its unit isn't a known volume unit.
 import { NO_QTY_UNITS } from './ingredients';
+import { convert } from './units';
+
+// Units that cost as negligible (0 cents) rather than partial: the inherently amountless
+// rinse/rim/twist, plus the trace decorative drop/pinch — a stray garnish-scale amount should
+// never drag a whole recipe to partial. `dash` is intentionally absent: bitters by the dash is
+// a real (if small) cost, and `convert` can price it.
+const NEGLIGIBLE_UNITS = new Set<string>([...NO_QTY_UNITS, 'drop', 'pinch']);
 
 export type CostIngredient = {
   id: number;
@@ -100,8 +107,8 @@ export function buildCostEngine(
     for (const l of linesByRecipe.get(recipeId) ?? []) {
       const name = ingById.get(l.ingredient_id)?.name ?? 'unknown ingredient';
 
-      // inherently amountless (rinse / rim / twist): negligible, not partial
-      if ((NO_QTY_UNITS as readonly string[]).includes(l.unit)) {
+      // negligible units (rinse / rim / twist / drop / pinch): 0 cents, not partial
+      if (NEGLIGIBLE_UNITS.has(l.unit)) {
         out.push({ ingredient: name, amount: l.amount, unit: l.unit, cents: 0, partial: false, reason: null });
         continue;
       }
@@ -152,12 +159,19 @@ export function buildCostEngine(
       ing.purchase_amount > 0 &&
       ing.purchase_unit != null
     ) {
-      // direct fallback price; usable only when the line's unit matches the priced unit
-      // (cross-unit conversion is #24 — partial until then). amount > 0 guards the divide.
-      result =
-        ing.purchase_unit === unit
-          ? { cents: ing.purchase_price_cents / ing.purchase_amount, reason: null }
-          : { cents: null, reason: `priced per ${ing.purchase_unit}, not ${unit}` };
+      // direct fallback price. Per-priced-unit cost is price/amount; convert it into the line's
+      // unit via the volume table. amount > 0 guards the divide. Same unit keeps the exact value
+      // (no float round-trip); cross-unit falls to partial only when convert can't (e.g. a `bag`).
+      const perPriced = ing.purchase_price_cents / ing.purchase_amount;
+      if (ing.purchase_unit === unit) {
+        result = { cents: perPriced, reason: null };
+      } else {
+        const pricedPerUnit = convert(1, unit, ing.purchase_unit); // priced-units in 1 line-unit
+        result =
+          pricedPerUnit == null
+            ? { cents: null, reason: `priced per ${ing.purchase_unit}, not ${unit}` }
+            : { cents: perPriced * pricedPerUnit, reason: null };
+      }
     } else {
       result = { cents: null, reason: 'no price' };
     }
@@ -178,16 +192,23 @@ export function buildCostEngine(
       result = { cents: null, reason: 'unknown cost source' };
     } else if (rec.yield_amount == null || rec.yield_unit == null || !(rec.yield_amount > 0)) {
       result = { cents: null, reason: 'cost source has no yield' };
-    } else if (rec.yield_unit !== unit) {
-      // yield is in a different unit; converting is #24's job
-      result = { cents: null, reason: `cost source yields ${rec.yield_unit}, not ${unit}` };
     } else {
       const batch = recipeCostInner(recipeId, stack);
-      // a partial batch cost can't give a trustworthy per-unit price
-      result =
-        batch.partialLines > 0
-          ? { cents: null, reason: 'cost source is itself partial' }
-          : { cents: batch.knownCents / rec.yield_amount, reason: null };
+      if (batch.partialLines > 0) {
+        // a partial batch cost can't give a trustworthy per-unit price
+        result = { cents: null, reason: 'cost source is itself partial' };
+      } else {
+        const perYieldUnit = batch.knownCents / rec.yield_amount; // cents per yield_unit
+        if (rec.yield_unit === unit) {
+          result = { cents: perYieldUnit, reason: null };
+        } else {
+          const yieldPerUnit = convert(1, unit, rec.yield_unit); // yield-units in 1 line-unit
+          result =
+            yieldPerUnit == null
+              ? { cents: null, reason: `cost source yields ${rec.yield_unit}, not ${unit}` }
+              : { cents: perYieldUnit * yieldPerUnit, reason: null };
+        }
+      }
     }
 
     unitMemo.set(key, result);
