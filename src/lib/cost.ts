@@ -38,6 +38,9 @@ export type CostLine = {
 
 /** One costed line in a recipe's breakdown. `cents` is null exactly when `partial`. */
 export type LineCost = {
+  /** the line's ingredient id — lets a consumer attribute line costs back to a catalog row
+   *  (the event-cost rollup aggregates by it; the per-recipe breakdown ignores it). */
+  ingredientId: number;
   ingredient: string;
   amount: number | null;
   unit: string;
@@ -109,23 +112,23 @@ export function buildCostEngine(
 
       // negligible units (rinse / rim / twist / drop / pinch): 0 cents, not partial
       if (NEGLIGIBLE_UNITS.has(l.unit)) {
-        out.push({ ingredient: name, amount: l.amount, unit: l.unit, cents: 0, partial: false, reason: null });
+        out.push({ ingredientId: l.ingredient_id, ingredient: name, amount: l.amount, unit: l.unit, cents: 0, partial: false, reason: null });
         continue;
       }
       // a costable unit with no amount means an unknown quantity — partial, don't drop it
       if (l.amount == null) {
-        out.push({ ingredient: name, amount: null, unit: l.unit, cents: null, partial: true, reason: 'no amount' });
+        out.push({ ingredientId: l.ingredient_id, ingredient: name, amount: null, unit: l.unit, cents: null, partial: true, reason: 'no amount' });
         partialLines++;
         continue;
       }
 
       const uc = unitCostInner(l.ingredient_id, l.unit, stack);
       if (uc.cents == null) {
-        out.push({ ingredient: name, amount: l.amount, unit: l.unit, cents: null, partial: true, reason: uc.reason });
+        out.push({ ingredientId: l.ingredient_id, ingredient: name, amount: l.amount, unit: l.unit, cents: null, partial: true, reason: uc.reason });
         partialLines++;
       } else {
         const cents = uc.cents * l.amount;
-        out.push({ ingredient: name, amount: l.amount, unit: l.unit, cents, partial: false, reason: null });
+        out.push({ ingredientId: l.ingredient_id, ingredient: name, amount: l.amount, unit: l.unit, cents, partial: false, reason: null });
         knownCents += cents;
       }
     }

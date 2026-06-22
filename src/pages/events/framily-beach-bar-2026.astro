@@ -3,6 +3,16 @@ import Layout from "../../layouts/Layout.astro";
 import { env } from "cloudflare:workers";
 import { type AuthEnv, getSession } from "../../lib/auth";
 import { nameKey } from "../../lib/service-log";
+import { formatCents } from "../../lib/cost";
+import {
+  drinkLikeRecipes,
+  hasPseudoJuiceLinks,
+  loadEventCostData,
+  rollupFromLoaded,
+  suggestMatch,
+  type EventCostRollup,
+  type PriceOverride,
+} from "../../lib/event-cost";
 
 // Drink names mirror the recipe DB; ingredient lists mirror it too (garnishes
 // omitted) but are shortened for display: "juice"/"syrup"/"bitters" dropped,
@@ -133,6 +143,86 @@ if (isAdmin) {
   const menuKeys = new Set(menuDrinkNames.map(nameKey));
   offMenuDrinks = allDrinks.results.map((d) => d.name).filter((n) => !menuKeys.has(nameKey(n)));
 }
+
+// ─── Event cost reconciliation (#80): admin-only. Bridges the service log → recipe DB → cost
+// engine: match each logged drink to a recipe (or dismiss it), confirm pricing, and roll the
+// event up into a per-cocktail table + grand total. None of this leaves the server for a
+// signed-out visitor; only an explicitly-published total reaches the public Stats below. ───
+type ReconcileRow = {
+  id: number;
+  name: string;
+  count: number;
+  selected: number | "dismiss" | ""; // preselected <option> value
+  tier: "matched" | "dismissed" | "auto" | "confirm" | "missing";
+  suggestionName: string | null; // labels the suggested option in the confirm tier
+};
+
+let reconcile: ReconcileRow[] = [];
+let recipeOptions: { id: number; name: string }[] = [];
+let costRollup: EventCostRollup | null = null;
+let overrides = new Map<number, PriceOverride>();
+let incidentals: { id: number; label: string; cents: number }[] = [];
+let totalDrinks = 0;
+let resolvedDrinks = 0;
+let allResolved = false;
+let usePseudoJuice = false;
+let pseudoJuiceMeaningful = false;
+let publishEnabled = false;
+let publishSnapshot: { cents: number | null; partial: boolean } | null = null;
+
+if (isAdmin) {
+  const cost = await loadEventCostData(env.DB, EVENT_SLUG);
+  const drinkRecipes = drinkLikeRecipes(cost.recipeMeta);
+  recipeOptions = drinkRecipes;
+  const recipeNameById = new Map(cost.recipeMeta.map((r) => [r.id, r.name]));
+
+  reconcile = cost.drinks.map((d): ReconcileRow => {
+    const res = cost.resolutions.get(d.id);
+    if (res?.recipeId != null) {
+      return { id: d.id, name: d.name, count: d.count, selected: res.recipeId, tier: "matched", suggestionName: null };
+    }
+    if (res?.dismissed) {
+      return { id: d.id, name: d.name, count: d.count, selected: "dismiss", tier: "dismissed", suggestionName: null };
+    }
+    // Unresolved: classify for a suggestion. Auto pre-selects the recipe (admin can change);
+    // confirm/missing stay unmatched so the admin makes an active choice.
+    const s = suggestMatch(d.name, drinkRecipes);
+    if (s.tier === "auto" && s.recipeId != null) {
+      return { id: d.id, name: d.name, count: d.count, selected: s.recipeId, tier: "auto", suggestionName: null };
+    }
+    if (s.tier === "confirm" && s.recipeId != null) {
+      return { id: d.id, name: d.name, count: d.count, selected: "", tier: "confirm", suggestionName: recipeNameById.get(s.recipeId) ?? null };
+    }
+    return { id: d.id, name: d.name, count: d.count, selected: "", tier: "missing", suggestionName: null };
+  });
+
+  totalDrinks = reconcile.length;
+  // Only PERSISTED resolutions count toward the gate — an auto suggestion isn't resolved until
+  // the admin saves it, so the cost view stays hidden until the matches are actually written.
+  resolvedDrinks = reconcile.filter((r) => r.tier === "matched" || r.tier === "dismissed").length;
+  allResolved = totalDrinks > 0 && resolvedDrinks === totalDrinks;
+
+  overrides = cost.overrides;
+  incidentals = cost.incidentals;
+  usePseudoJuice = cost.settings.usePseudoJuice;
+  const recipeTypeById = new Map(cost.recipeMeta.map((r) => [r.id, r.type]));
+  pseudoJuiceMeaningful = hasPseudoJuiceLinks(cost.ingredients, recipeTypeById);
+  publishEnabled = cost.settings.publicEnabled;
+  publishSnapshot = { cents: cost.settings.publicCents, partial: cost.settings.publicPartial };
+
+  if (allResolved) costRollup = rollupFromLoaded(cost);
+}
+
+// Public-total snapshot (#80): a single cheap row read for EVERY visitor. The public Stats
+// section renders only this number — it never runs the cost engine or touches pricing data, so
+// per-cocktail / ingredient costs cannot leak. Off ⇒ nothing cost-related is public.
+const costPublicRow = await env.DB.prepare(
+  `SELECT public_total_enabled, public_known_cents, public_is_partial
+   FROM event_cost_settings WHERE event_slug = ?`,
+).bind(EVENT_SLUG).first<{ public_total_enabled: number; public_known_cents: number | null; public_is_partial: number }>();
+const publicTotal = costPublicRow?.public_total_enabled
+  ? { cents: costPublicRow.public_known_cents ?? 0, partial: costPublicRow.public_is_partial === 1 }
+  : null;
 
 // ─── Public stats (#75): night-level AGGREGATES only, visible to everyone. These
 // queries never join service_guests and never touch service_night_guest_drinks —
@@ -358,6 +448,13 @@ const logJson = JSON.stringify({
               <span class="stat-cap">drinks in rotation</span>
             </div>
           </div>
+
+          {publicTotal && (
+            <p class="stats-tab">
+              <span class="stats-tab-num">{publicTotal.partial ? "north of " : ""}{formatCents(publicTotal.cents)}</span>
+              <span class="stats-tab-cap poster-muted">run up behind the bar</span>
+            </p>
+          )}
 
           <figure class="chart chart-nights">
             <figcaption>Pours over time</figcaption>
@@ -611,6 +708,199 @@ const logJson = JSON.stringify({
       </div>
 
       <script type="application/json" id="log-data" set:html={logJson} />
+    </section>
+  )}
+
+  {isAdmin && (
+    <section class="container event-cost" id="event-cost" data-slug={EVENT_SLUG}>
+      <p class="eyebrow">Settling up</p>
+      <h2>The tab</h2>
+      <p class="muted">Match the legal pad to the book, then count the damage.</p>
+
+      {totalDrinks === 0 ? (
+        <p class="muted ec-empty">Nothing logged yet. The tab opens when the bar does.</p>
+      ) : (
+        <Fragment>
+          {/* ─── Reconcile ─── */}
+          <form id="rec-form" class="ec-block">
+            <div class="alert alert-danger is-hidden" id="rec-error" role="alert">
+              <span class="alert-icon">!</span>
+              <div><p class="alert-body" id="rec-error-msg"></p></div>
+            </div>
+
+            <div class="ec-head">
+              <h3>Reconcile</h3>
+              <span class="muted ec-progress">{resolvedDrinks} of {totalDrinks} sorted</span>
+            </div>
+            <p class="help">The obvious names are matched for you. Confirm the maybes; flag anything that isn't a cocktail.</p>
+
+            <div class="rec-list">
+              {reconcile.map((r) => (
+                <div class="rec-row" data-drink-id={r.id}>
+                  <div class="rec-name">
+                    <span class="rec-drink">{r.name}</span>
+                    <span class="muted rec-count">×{r.count}</span>
+                    {r.tier === "auto" && <span class="ec-tag">auto</span>}
+                    {r.tier === "confirm" && <span class="ec-tag ec-tag-ask">that you?</span>}
+                    {r.tier === "missing" && <span class="ec-tag ec-tag-miss">stranger</span>}
+                  </div>
+                  <div class="select-wrap">
+                    <select class="rec-select" aria-label={`Match ${r.name}`}>
+                      <option value="" selected={r.selected === ""}>— unmatched —</option>
+                      <option value="dismiss" selected={r.selected === "dismiss"}>not a cocktail (beer, water…)</option>
+                      {recipeOptions.map((opt) => (
+                        <option value={opt.id} selected={r.selected === opt.id}>
+                          {opt.name}{r.tier === "confirm" && r.suggestionName === opt.name ? " — maybe?" : ""}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  {r.tier === "missing" && (
+                    <p class="help rec-hint">Nobody by that name on the book. <a href="/cocktails">Add it on the cocktails page →</a></p>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div class="ec-actions">
+              <button type="button" class="button" id="rec-save">Save matches</button>
+            </div>
+          </form>
+
+          {allResolved && costRollup ? (
+            <Fragment>
+              {/* ─── Pricing ─── */}
+              <form id="price-form" class="ec-block">
+                <div class="alert alert-danger is-hidden" id="price-error" role="alert">
+                  <span class="alert-icon">!</span>
+                  <div><p class="alert-body" id="price-error-msg"></p></div>
+                </div>
+
+                <h3>Pricing</h3>
+                <label class="ec-check">
+                  <input type="checkbox" id="pj-toggle" checked={usePseudoJuice} />
+                  Cost lime &amp; lemon by the super-juice, not the fruit
+                </label>
+                {!pseudoJuiceMeaningful && <p class="help">No super-juice substitutes on file — nothing to swap.</p>}
+
+                <div class="table-frame">
+                  <table class="table ec-agg">
+                    <thead>
+                      <tr><th>Ingredient</th><th>Poured</th><th>Cost</th><th>Per-event price</th></tr>
+                    </thead>
+                    <tbody>
+                      {costRollup.aggregate.map((a) => {
+                        const ov = overrides.get(a.ingredientId);
+                        return (
+                          <tr data-ingredient-id={a.ingredientId}>
+                            <td>{a.name}</td>
+                            <td class="ec-qty">{a.quantity || "—"}</td>
+                            <td class="amt">{a.partial ? <span class="muted">no price</span> : formatCents(a.cents)}</td>
+                            <td>
+                              <div class="ec-override">
+                                <span class="ec-affix">$</span>
+                                <input type="number" min="0" step="0.01" class="ov-price" placeholder="price" value={ov ? (ov.cents / 100).toString() : ""} aria-label={`${a.name} override price`} />
+                                <span class="ec-affix">per</span>
+                                <input type="number" min="0" step="any" class="ov-amount" placeholder="amt" value={ov ? ov.amount.toString() : ""} aria-label={`${a.name} override amount`} />
+                                <input type="text" class="ov-unit" maxlength="20" placeholder="unit" value={ov ? ov.unit : ""} aria-label={`${a.name} override unit`} />
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                      {costRollup.aggregate.length === 0 && (
+                        <tr><td colspan="4" class="muted">No costable ingredients yet.</td></tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                <div class="ec-incidentals">
+                  <p class="label">Incidentals</p>
+                  <p class="help">Ice, cups, the bag of limes that never made the book.</p>
+                  <div class="inc-list" id="inc-list">
+                    {incidentals.map((i) => (
+                      <div class="inc-row">
+                        <input type="text" class="inc-label" maxlength="60" placeholder="what" value={i.label} aria-label="Incidental label" />
+                        <span class="ec-affix">$</span>
+                        <input type="number" min="0" step="0.01" class="inc-amount" placeholder="0.00" value={(i.cents / 100).toString()} aria-label="Incidental amount" />
+                        <button type="button" class="button ghost sm inc-remove" aria-label="Remove incidental">✕</button>
+                      </div>
+                    ))}
+                  </div>
+                  <button type="button" class="button ghost sm" id="inc-add">+ add incidental</button>
+                </div>
+
+                <div class="ec-actions">
+                  <button type="button" class="button" id="price-save">Save pricing</button>
+                </div>
+              </form>
+
+              {/* ─── The damage ─── */}
+              <div class="ec-block">
+                <h3>The damage</h3>
+                <div class="table-frame">
+                  <table class="table ec-cocktails">
+                    <thead>
+                      <tr><th>Cocktail</th><th>Qty</th><th>Each</th><th>Total</th></tr>
+                    </thead>
+                    <tbody>
+                      {costRollup.perCocktail.map((c) => (
+                        <tr>
+                          <td>{c.name}</td>
+                          <td>{c.qty}</td>
+                          <td class="amt">{c.eachCents > 0 ? `${c.eachPartial ? "≥ " : ""}${formatCents(c.eachCents)}` : "—"}</td>
+                          <td class="amt">{c.totalCents > 0 ? `${c.eachPartial ? "≥ " : ""}${formatCents(c.totalCents)}` : "—"}</td>
+                        </tr>
+                      ))}
+                      {costRollup.perCocktail.length === 0 && (
+                        <tr><td colspan="4" class="muted">Everything logged was waved off as non-costable.</td></tr>
+                      )}
+                    </tbody>
+                    <tfoot>
+                      {costRollup.incidentalsCents > 0 && (
+                        <tr class="ec-foot-inc"><td colspan={3}>Incidentals</td><td class="amt">{formatCents(costRollup.incidentalsCents)}</td></tr>
+                      )}
+                      <tr class="ec-grand">
+                        <td colspan={3}>Grand total</td>
+                        <td class="amt"><strong class="ec-grand-num">{costRollup.partial ? "≥ " : ""}{formatCents(costRollup.grandKnownCents)}</strong></td>
+                      </tr>
+                    </tfoot>
+                  </table>
+                </div>
+
+                {(costRollup.flags.unpricedIngredients.length > 0 || costRollup.flags.dismissed.length > 0) && (
+                  <div class="ec-flags">
+                    {costRollup.flags.unpricedIngredients.length > 0 && (
+                      <p class="help"><strong>No price on:</strong> {costRollup.flags.unpricedIngredients.join(", ")}. The total's a floor until those are sorted.</p>
+                    )}
+                    {costRollup.flags.dismissed.length > 0 && (
+                      <p class="help"><strong>Off the books:</strong> {costRollup.flags.dismissed.join(", ")}.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* ─── Publish ─── */}
+                <div class="ec-publish">
+                  <label class="ec-check">
+                    <input type="checkbox" id="pub-toggle" checked={publishEnabled} />
+                    Show this total on the public page
+                  </label>
+                  <p class="help is-hidden" id="pub-error"></p>
+                  {publishEnabled && publishSnapshot?.cents != null && (
+                    <p class="help">
+                      The public sees {publishSnapshot.partial ? "≥ " : ""}{formatCents(publishSnapshot.cents)}.
+                      Logged or re-priced since? Flip this off and on to refresh it.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </Fragment>
+          ) : (
+            <p class="muted ec-gate">The damage tallies up once every drink is sorted.</p>
+          )}
+        </Fragment>
+      )}
     </section>
   )}
 
@@ -978,6 +1268,26 @@ const logJson = JSON.stringify({
       color: var(--poster-sunset);
     }
 
+    /* public cost total (#80) — one poster-styled line; the only cost figure that ever reaches a
+       signed-out visitor. Bespoke, like the rest of the Stats island. */
+    .stats-tab {
+      display: flex;
+      flex-direction: column;
+      gap: 0.3rem;
+      margin: 0 auto 2.5rem;
+    }
+    .stats-tab-num {
+      font-family: var(--poster-font-hero);
+      font-weight: 400;
+      font-size: 2.25rem;
+      line-height: 1;
+      color: var(--poster-sunset);
+    }
+    .stats-tab-cap {
+      font-size: 0.8rem;
+      letter-spacing: 0.03em;
+    }
+
     /* ─── Service log (#72) — admin-only, OUTSIDE the poster island. Shared-system
        UI: every primitive comes from global.css (retinted by the beach theme);
        only page layout lives here, built from the shared tokens. :global() marks
@@ -1120,6 +1430,156 @@ const logJson = JSON.stringify({
       display: flex;
       justify-content: flex-end;
       margin-top: var(--space-sm);
+    }
+
+    /* ─── Event cost (#80) — admin-only, OUTSIDE the poster island. Shared-system UI: every
+       primitive (button, table, alert, field, select, eyebrow) comes from global.css, beach-
+       retinted; only layout lives here, built from the shared tokens. :global() marks the
+       incidental rows the client script can build at runtime. ─── */
+    .event-cost {
+      padding-top: 0;
+      border-top: 1px solid var(--hair);
+      margin-top: var(--space-lg);
+    }
+    .event-cost > .eyebrow {
+      margin: var(--space-xl) 0 var(--space-2xs);
+    }
+    .ec-empty,
+    .ec-gate {
+      margin-top: var(--space-lg);
+    }
+    .ec-block {
+      margin-top: var(--space-xl);
+    }
+    .ec-head {
+      display: flex;
+      align-items: baseline;
+      justify-content: space-between;
+      gap: var(--space-sm);
+    }
+    .ec-head h3 {
+      margin: 0;
+    }
+    .ec-progress {
+      font-size: var(--text-sm);
+    }
+    .rec-list {
+      display: grid;
+      gap: var(--space-sm);
+      margin: var(--space-md) 0;
+    }
+    .rec-row {
+      display: grid;
+      grid-template-columns: 1fr minmax(12rem, 20rem);
+      align-items: center;
+      gap: var(--space-2xs) var(--space-md);
+    }
+    @media (max-width: 560px) {
+      .rec-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    .rec-name {
+      display: flex;
+      align-items: baseline;
+      flex-wrap: wrap;
+      gap: var(--space-xs);
+    }
+    .rec-drink {
+      font-weight: 600;
+    }
+    .rec-count {
+      font-size: var(--text-sm);
+    }
+    .ec-tag {
+      font-size: var(--text-xs);
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .ec-tag-ask {
+      color: var(--accent-legible);
+    }
+    .rec-hint {
+      grid-column: 1 / -1;
+      margin: 0;
+    }
+    .ec-actions {
+      display: flex;
+      justify-content: flex-end;
+      margin-top: var(--space-md);
+    }
+    .ec-check {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+      font-weight: 600;
+      font-size: 0.9rem;
+      margin: var(--space-sm) 0;
+    }
+    .ec-check input {
+      width: auto;
+    }
+    .ec-qty {
+      white-space: nowrap;
+      color: var(--muted);
+      font-variant-numeric: tabular-nums;
+    }
+    .ec-affix {
+      color: var(--muted);
+      font-size: var(--text-sm);
+      white-space: nowrap;
+    }
+    .ec-override {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: var(--space-2xs);
+    }
+    .ec-override input {
+      width: auto;
+    }
+    .ov-price { max-width: 5rem; }
+    .ov-amount { max-width: 4rem; }
+    .ov-unit { max-width: 4.5rem; }
+    .ec-incidentals {
+      margin-top: var(--space-lg);
+    }
+    .inc-list {
+      display: grid;
+      gap: var(--space-xs);
+      margin: var(--space-xs) 0 var(--space-sm);
+    }
+    .event-cost :global(.inc-row) {
+      display: flex;
+      align-items: center;
+      gap: var(--space-xs);
+    }
+    .event-cost :global(.inc-row .inc-label) {
+      flex: 1;
+    }
+    .event-cost :global(.inc-row .inc-amount) {
+      max-width: 6rem;
+    }
+    .ec-foot-inc td {
+      color: var(--muted);
+    }
+    .ec-grand td {
+      font-weight: 700;
+    }
+    .ec-grand-num {
+      color: var(--accent-legible);
+    }
+    .ec-flags {
+      margin-top: var(--space-md);
+    }
+    .ec-flags .help {
+      margin: var(--space-2xs) 0 0;
+    }
+    .ec-publish {
+      margin-top: var(--space-lg);
+      padding-top: var(--space-md);
+      border-top: 1px solid var(--hair);
     }
   </style>
 
@@ -1392,6 +1852,136 @@ const logJson = JSON.stringify({
         if (res.ok) location.reload();
         else showError("Didn’t take. Try again.");
       });
+    }
+  </script>
+
+  <script>
+    // Event cost tool (#80): admin-only island. Each save persists, then reloads — the page
+    // re-SSRs every cost figure server-side (no client cost engine). Absent for signed-out
+    // visitors, so this no-ops.
+    const costSection = document.getElementById("event-cost");
+    if (costSection) initEventCost(costSection);
+
+    function initEventCost(section: HTMLElement) {
+      const slug = section.dataset.slug ?? "";
+      const byId = (id: string) => document.getElementById(id);
+
+      const showError = (boxId: string, msgId: string, msg: string) => {
+        const m = byId(msgId);
+        if (m) m.textContent = msg;
+        byId(boxId)?.classList.remove("is-hidden");
+      };
+      const clearError = (boxId: string) => byId(boxId)?.classList.add("is-hidden");
+
+      async function post(path: string, payload: unknown): Promise<string | null> {
+        const res = await fetch(path, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (res.ok) return null;
+        const j = (await res.json().catch(() => null)) as { error?: string } | null;
+        return j?.error ?? "Didn’t take. Try again.";
+      }
+
+      // ── Reconcile: collect every select, persist the resolved ones (unmatched are omitted) ──
+      byId("rec-save")?.addEventListener("click", async () => {
+        clearError("rec-error");
+        const resolutions: { service_drink_id: number; recipe_id: number | null; dismissed: boolean }[] = [];
+        section.querySelectorAll<HTMLElement>(".rec-row").forEach((row) => {
+          const sel = row.querySelector(".rec-select") as HTMLSelectElement | null;
+          if (!sel) return;
+          const id = Number(row.dataset.drinkId);
+          const v = sel.value;
+          if (v === "") return;
+          if (v === "dismiss") resolutions.push({ service_drink_id: id, recipe_id: null, dismissed: true });
+          else resolutions.push({ service_drink_id: id, recipe_id: Number(v), dismissed: false });
+        });
+        const err = await post("/api/admin/event-cost/matches", { event_slug: slug, resolutions });
+        if (err) showError("rec-error", "rec-error-msg", err);
+        else location.reload();
+      });
+
+      // ── Incidentals: add / remove rows (client-built rows are :global in the stylesheet) ──
+      const incList = byId("inc-list");
+      const makeIncRow = () => {
+        const row = document.createElement("div");
+        row.className = "inc-row";
+        row.innerHTML =
+          '<input type="text" class="inc-label" maxlength="60" placeholder="what" aria-label="Incidental label" />' +
+          '<span class="ec-affix">$</span>' +
+          '<input type="number" min="0" step="0.01" class="inc-amount" placeholder="0.00" aria-label="Incidental amount" />' +
+          '<button type="button" class="button ghost sm inc-remove" aria-label="Remove incidental">✕</button>';
+        return row;
+      };
+      byId("inc-add")?.addEventListener("click", () => incList?.appendChild(makeIncRow()));
+      incList?.addEventListener("click", (e) => {
+        const t = e.target as HTMLElement;
+        if (t.classList.contains("inc-remove")) t.closest(".inc-row")?.remove();
+      });
+
+      // ── Pricing: pseudo-juice toggle + overrides + incidentals, saved together ──
+      byId("price-save")?.addEventListener("click", async () => {
+        clearError("price-error");
+        const use_pseudo_juice = (byId("pj-toggle") as HTMLInputElement | null)?.checked === true;
+        let bad: string | null = null;
+
+        const overrides: { ingredient_id: number; purchase_price: number; purchase_amount: number; purchase_unit: string }[] = [];
+        section.querySelectorAll<HTMLElement>(".ec-agg tbody tr[data-ingredient-id]").forEach((row) => {
+          const price = ((row.querySelector(".ov-price") as HTMLInputElement | null)?.value ?? "").trim();
+          const amount = ((row.querySelector(".ov-amount") as HTMLInputElement | null)?.value ?? "").trim();
+          const unit = ((row.querySelector(".ov-unit") as HTMLInputElement | null)?.value ?? "").trim();
+          if (!price && !amount && !unit) return;
+          if (!price || !amount || !unit) {
+            bad = "An override needs a price, an amount, and a unit — or leave all three blank.";
+            return;
+          }
+          overrides.push({
+            ingredient_id: Number(row.dataset.ingredientId),
+            purchase_price: Number(price),
+            purchase_amount: Number(amount),
+            purchase_unit: unit,
+          });
+        });
+        if (bad) return showError("price-error", "price-error-msg", bad);
+
+        const incidentals: { label: string; amount: number }[] = [];
+        section.querySelectorAll<HTMLElement>(".inc-row").forEach((row) => {
+          const label = ((row.querySelector(".inc-label") as HTMLInputElement | null)?.value ?? "").trim();
+          const amount = ((row.querySelector(".inc-amount") as HTMLInputElement | null)?.value ?? "").trim();
+          if (!label && !amount) return;
+          if (!label || !amount) {
+            bad = "An incidental needs a label and an amount.";
+            return;
+          }
+          incidentals.push({ label, amount: Number(amount) });
+        });
+        if (bad) return showError("price-error", "price-error-msg", bad);
+
+        const err = await post("/api/admin/event-cost/pricing", { event_slug: slug, use_pseudo_juice, overrides, incidentals });
+        if (err) showError("price-error", "price-error-msg", err);
+        else location.reload();
+      });
+
+      // ── Publish: flip the public total on/off (server snapshots it on enable) ──
+      const pub = byId("pub-toggle") as HTMLInputElement | null;
+      if (pub) {
+        pub.addEventListener("change", async () => {
+          byId("pub-error")?.classList.add("is-hidden");
+          const enabled = pub.checked;
+          const err = await post("/api/admin/event-cost/publish", { event_slug: slug, enabled });
+          if (err) {
+            pub.checked = !enabled;
+            const pe = byId("pub-error");
+            if (pe) {
+              pe.textContent = err;
+              pe.classList.remove("is-hidden");
+            }
+          } else {
+            location.reload();
+          }
+        });
+      }
     }
   </script>
 </Layout>

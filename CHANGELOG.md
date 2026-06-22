@@ -5,6 +5,23 @@ changes only — new features, auth/security changes, data-model or infrastructu
 shifts. Trivial changes (styling tweaks, copy edits, small bug fixes, refactors)
 are intentionally left out to keep this readable.
 
+## 2026-06-22
+
+### Added
+- **Beach bar: cost the event from the service log.** A new admin-only tool on the beach-bar
+  event page bridges the service log to the recipe DB and cost engine. Reconcile each logged
+  drink to a recipe in three tiers — identical names match silently, near/abbreviated names
+  are flagged with a suggestion to confirm, unmatched names link out to `/cocktails` — or
+  dismiss a drink as non-costable. Once every drink is sorted it rolls the event up into a
+  per-cocktail table and a grand total, with a pricing-review step: an aggregate ingredient
+  list, an event-wide lime/lemon → super-juice toggle, per-ingredient price overrides (a
+  bottle/purchase price, never mutating the shared catalog), and flat incidentals. Pricing
+  degrades gracefully — a missing price marks a partial, never a block. An admin can publish
+  **only the overall total** to the public Stats section (a snapshot that holds until
+  re-published); per-cocktail and ingredient pricing never reach the public. New D1 tables
+  (migration `0008`): `event_drink_resolutions`, `event_ingredient_prices`, `event_incidentals`,
+  `event_cost_settings`. (#80)
+
 ## 2026-06-18
 
 ### Added
